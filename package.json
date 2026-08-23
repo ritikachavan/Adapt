@@ -1,0 +1,31 @@
+{
+  "name": "adapt-finance-controller",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ADAPT — Adaptive AI Finance Controller. Deterministic reconciliation + local AI judge (Ollama) + human review + correction memory.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "generate:data": "tsx scripts/generate-data.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.10.0",
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "prisma": "^6.10.0",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

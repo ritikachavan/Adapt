@@ -1,0 +1,111 @@
+// ADAPT — Adaptive AI Finance Controller
+//
+// Schema overview:
+//   Financial trail : Order → Payment → (Settlement, Refund); LedgerEntry references records generically.
+//   Decisions       : ReconciliationDecision stores every deterministic / AI-judged outcome (confidence + evidence).
+//   Learning loop   : Correction captures human fixes; they feed correction memory for future decisions.
+//   Traceability    : AuditLog records actions across all entities (append-only by convention).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A customer purchase order — origin of every reconciliation trail.
+model Order {
+  id         String   @id @default(cuid())
+  customerId String
+  amount     Float
+  currency   String
+  createdAt  DateTime @default(now())
+
+  payments Payment[]
+}
+
+/// Money received against an order.
+model Payment {
+  id        String   @id @default(cuid())
+  orderId   String
+  amount    Float
+  status    String // e.g. PENDING | SETTLED | FAILED | REFUNDED
+  timestamp DateTime
+
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  settlements Settlement[]
+  refunds     Refund[]
+}
+
+/// Funds settled to the merchant account for a payment (fees deducted).
+model Settlement {
+  id             String   @id @default(cuid())
+  paymentId      String
+  amount         Float
+  fee            Float
+  settlementDate DateTime
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+/// Money returned to the customer against a payment.
+model Refund {
+  id        String   @id @default(cuid())
+  paymentId String
+  amount    Float
+  timestamp DateTime
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+/// Double-entry bookkeeping line; references any financial record by id.
+/// Deliberately a loose reference (no hard FK): ledger entries may point at
+/// orders, payments, settlements, or refunds depending on the entry.
+model LedgerEntry {
+  id          String   @id @default(cuid())
+  referenceId String
+  debit       Float
+  credit      Float
+  timestamp   DateTime
+}
+
+/// Outcome of judging a transaction — produced deterministically, by the local
+/// AI judge (Ollama), or by a human reviewer. Always carries confidence + evidence.
+model ReconciliationDecision {
+  id              String   @id @default(cuid())
+  transactionId   String // generic reference to the judged transaction record
+  decision        String // e.g. MATCHED | PARTIAL | UNMATCHED
+  matchedRecordId String? // present only when the case was matched
+  confidence      Float // 0.0 – 1.0
+  reason          String
+  evidence        String // JSON-encoded evidence (SQLite has no native JSON type)
+  source          String // e.g. DETERMINISTIC | OLLAMA | HUMAN_REVIEW
+  createdAt       DateTime @default(now())
+
+  corrections Correction[]
+}
+
+/// Human fix applied to a reconciliation decision; feeds correction memory.
+model Correction {
+  id                String   @id @default(cuid())
+  decisionId        String
+  originalDecision  String
+  correctedDecision String
+  correctionType    String // e.g. WRONG_MATCH | FALSE_POSITIVE | SPLIT_PAYMENT
+  explanation       String
+  createdAt         DateTime @default(now())
+
+  decision ReconciliationDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+}
+
+/// Append-only audit trail: who/what did what, to which entity, when.
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  details    String // JSON-encoded payload (SQLite has no native JSON type)
+  createdAt  DateTime @default(now())
+}
