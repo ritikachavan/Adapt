@@ -41,7 +41,12 @@ function makeProvider(fetchImpl: (url: string, init: OllamaRequestInit) => Promi
 describe("ollama AI judge", () => {
   it("returns a valid MATCHED verdict with structured evidence", async () => {
     let capturedUrl = "";
-    let capturedBody: { model?: string } = {};
+    let capturedBody: {
+      model?: string;
+      stream?: boolean;
+      format?: string;
+      options?: { temperature?: number };
+    } = {};
     const provider = makeProvider(async (url, init) => {
       capturedUrl = url;
       capturedBody = JSON.parse(init.body);
@@ -66,6 +71,9 @@ describe("ollama AI judge", () => {
     expect(result.evidence).toHaveLength(1);
     expect(capturedUrl).toContain("/api/generate");
     expect(capturedBody.model).toBe("qwen2.5:7b-instruct");
+    expect(capturedBody.stream).toBe(false);
+    expect(capturedBody.format).toBe("json");
+    expect(capturedBody.options?.temperature).toBe(0);
   });
 
   it("returns a valid REVIEW verdict untouched", async () => {

@@ -1,17 +1,20 @@
 /**
- * ADAPT — local Ollama implementation of the AiJudgeProvider abstraction.
+ * ADAPT - Local Ollama AI Judge
  *
- * Safety contract:
- *  - LOCAL AI ONLY: talks to OLLAMA_BASE_URL (default http://localhost:11434).
- *    Never OpenAI/Groq/Gemini/Claude or any paid/external API.
- *  - The model may only select a matchedRecordId from the candidate ids it
- *    was shown; anything else is treated as a hallucination.
- *  - EVERY failure (unavailable, timeout, malformed JSON, empty response,
- *    invalid decision, out-of-range confidence, hallucinated id, missing
- *    fields) degrades to the safe REVIEW fallback with confidence 0.
+ * Safety:
+ * - Local Ollama only.
+ * - Ollama failures always become REVIEW with confidence 0.
+ * - MATCHED can only use a candidateRecordId supplied by the application.
+ * - Invalid JSON / invalid verdicts are rejected safely.
  */
-import type { AiJudgeProvider, JudgeCandidateContext } from "./provider";
+
+import type {
+  AiJudgeProvider,
+  JudgeCandidateContext,
+} from "./provider";
+
 import { createSafeFallback } from "./provider";
+
 import type {
   DecisionResult,
   ReconciliationDecision,
@@ -26,8 +29,9 @@ const VALID_DECISIONS: readonly ReconciliationDecision[] = [
 ];
 
 const DEFAULT_BASE_URL = "http://localhost:11434";
-const DEFAULT_MODEL = "qwen2.5:7b-instruct";
-const DEFAULT_TIMEOUT_MS = 60_000;
+const DEFAULT_MODEL = "qwen2.5:1.5b";
+const DEFAULT_TIMEOUT_MS = 20_000;
+const NUM_PREDICT = 200;
 
 export interface OllamaRequestInit {
   method: string;
@@ -48,13 +52,9 @@ export type OllamaFetch = (
 ) => Promise<OllamaResponseLike>;
 
 export interface OllamaJudgeOptions {
-  /** env: OLLAMA_BASE_URL */
   baseUrl?: string;
-  /** env: OLLAMA_MODEL */
   model?: string;
-  /** env: OLLAMA_TIMEOUT_MS */
   timeoutMs?: number;
-  /** Injectable HTTP layer so tests never need a running Ollama. */
   fetchImpl?: OllamaFetch;
 }
 
@@ -66,42 +66,120 @@ interface RawVerdict {
   evidence: DecisionResult["evidence"];
 }
 
-class InvalidVerdictError extends Error {}
+class InvalidVerdictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidVerdictError";
+  }
+}
 
-/** Mandatory safety language sent with every judging request. */
-const SAFETY_RULES = [
-  "You are an AI assistant for a financial reconciliation controller.",
-  "You are not authorized to invent records or infer unsupported matches.",
-  "Use only the supplied evidence.",
-  "Similarity alone is insufficient for approval.",
-  "If evidence is insufficient, choose REVIEW.",
-  "Prefer REVIEW over an unsupported MATCHED decision.",
-].join("\n");
+function normalizeBaseUrl(value?: string): string {
+  let baseUrl = (value ?? DEFAULT_BASE_URL).trim();
 
-function buildJudgePrompt(context: JudgeCandidateContext): string {
+  if (baseUrl.startsWith("OLLAMA_BASE_URL=")) {
+    baseUrl = baseUrl
+      .slice("OLLAMA_BASE_URL=".length)
+      .trim();
+  }
+
+  if (
+    (baseUrl.startsWith('"') && baseUrl.endsWith('"')) ||
+    (baseUrl.startsWith("'") && baseUrl.endsWith("'"))
+  ) {
+    baseUrl = baseUrl.slice(1, -1).trim();
+  }
+
+  baseUrl = baseUrl.replace(/\/+$/, "");
+
+  if (baseUrl.endsWith("/api")) {
+    baseUrl = baseUrl.slice(0, -4);
+  }
+
+  if (!/^https?:\/\/[^/]+/i.test(baseUrl)) {
+    throw new Error(
+      `Invalid OLLAMA_BASE_URL: "${baseUrl}". ` +
+        "Expected something like http://localhost:11434"
+    );
+  }
+
+  return baseUrl;
+}
+
+function buildJudgePrompt(
+  context: JudgeCandidateContext
+): string {
   const caseData = {
-    paymentId: context.paymentId,
-    orderId: context.orderId,
-    payment: context.paymentSummary,
-    candidateSettlements: context.candidateSettlements,
-    refunds: context.refunds,
-    ledgerEvidence: context.ledgerEvidence,
-    deterministicEvidence: context.deterministicEvidence,
-    candidateRecordIds: context.candidateRecordIds,
+    payment: {
+      id: context.paymentSummary.id,
+      orderId: context.paymentSummary.orderId,
+      amount: context.paymentSummary.amount,
+      status: context.paymentSummary.status,
+    },
+
+    settlements: context.candidateSettlements.map((s) => ({
+      id: s.id,
+      amount: s.amount,
+      fee: s.fee,
+      settlementDate: s.settlementDate,
+    })),
+
+    refunds: context.refunds.map((r) => ({
+      id: r.id,
+      amount: r.amount,
+      timestamp: r.timestamp,
+    })),
+
+    ledger: context.ledgerEvidence.map((l) => ({
+      id: l.id,
+      referenceId: l.referenceId,
+      debit: l.debit,
+      credit: l.credit,
+    })),
+
+    deterministicEvidence:
+      context.deterministicEvidence.map((e) => ({
+        field: e.field,
+        detail: e.detail,
+      })),
+
+    candidateRecordIds:
+      context.candidateRecordIds,
   };
+
   return [
-    SAFETY_RULES,
+    "You are a financial reconciliation judge.",
+    "Use ONLY the supplied CASE DATA.",
+    "You are not authorized to invent records or IDs.",
+    "Similarity alone is insufficient for approval.",
+    "Prefer REVIEW over an unsupported MATCHED decision.",
+    "matchedRecordId must be null unless selecting an exact candidate ID.",
+    "Return ONLY one valid JSON object.",
+    "Do not use markdown or code fences.",
+    "Keep reason under 10 words.",
     "",
-    "Respond with ONLY one JSON object, no prose, using exactly this shape:",
-    '{"decision":"MATCHED|REVIEW|MISMATCH|MISSING|REFUNDED","confidence":0.0,"matchedRecordId":null,"reason":"explanation","evidence":[{"field":"amount","value":"12000","significance":"why this matters"}]}',
-    "Additional rules:",
-    '- "matchedRecordId" must be null or one of candidateRecordIds; never invent an id.',
-    '- "confidence" must be between 0 and 1.',
-    "- If the supplied evidence does not clearly support a decision, choose REVIEW.",
+    "Required JSON:",
+    '{"decision":"REVIEW","confidence":0,"matchedRecordId":null,"reason":"short reason","evidence":[]}',
+    "",
+    "Allowed decisions: MATCHED, REVIEW, MISMATCH, MISSING, REFUNDED.",
+    "confidence: 0..1, evidence: 0..3 items.",
     "",
     "CASE DATA:",
-    JSON.stringify(caseData, null, 2),
+    JSON.stringify(caseData),
   ].join("\n");
+}
+
+function stripWrappingCodeFence(
+  rawText: string
+): string {
+  const trimmed = rawText.trim();
+
+  const match = trimmed.match(
+    /^```(?:json)?\s*([\s\S]*?)\s*```$/i
+  );
+
+  return match
+    ? match[1].trim()
+    : trimmed;
 }
 
 function parseAndValidateVerdict(
@@ -111,131 +189,299 @@ function parseAndValidateVerdict(
   if (!rawText || rawText.trim() === "") {
     throw new InvalidVerdictError("empty response");
   }
+
+  const cleanedText =
+    stripWrappingCodeFence(rawText);
+
   let parsed: unknown;
+
   try {
-    parsed = JSON.parse(rawText);
+    parsed = JSON.parse(cleanedText);
   } catch {
     throw new InvalidVerdictError("malformed JSON");
   }
-  if (typeof parsed !== "object" || parsed === null) {
-    throw new InvalidVerdictError("response is not an object");
-  }
-  const v = parsed as Record<string, unknown>;
 
-  const decision = v.decision;
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    Array.isArray(parsed)
+  ) {
+    throw new InvalidVerdictError(
+      "response is not an object"
+    );
+  }
+
+  const value =
+    parsed as Record<string, unknown>;
+
+  const decision = value.decision;
+
   if (
     typeof decision !== "string" ||
-    !VALID_DECISIONS.some((valid) => valid === decision)
+    !VALID_DECISIONS.includes(
+      decision as ReconciliationDecision
+    )
   ) {
-    throw new InvalidVerdictError(`invalid decision: ${String(decision)}`);
+    throw new InvalidVerdictError(
+      `invalid decision: ${String(decision)}`
+    );
   }
 
-  const confidence = v.confidence;
+  const confidence = value.confidence;
+
   if (
     typeof confidence !== "number" ||
     !Number.isFinite(confidence) ||
     confidence < 0 ||
     confidence > 1
   ) {
-    throw new InvalidVerdictError("confidence out of range");
+    throw new InvalidVerdictError(
+      "confidence must be a finite number between 0 and 1"
+    );
   }
 
-  if (!("matchedRecordId" in v)) {
-    throw new InvalidVerdictError("missing matchedRecordId");
+  if (!("matchedRecordId" in value)) {
+    throw new InvalidVerdictError(
+      "missing matchedRecordId"
+    );
   }
-  const matchedRecordId = v.matchedRecordId;
-  if (matchedRecordId !== null && typeof matchedRecordId !== "string") {
-    throw new InvalidVerdictError("matchedRecordId must be null or a string");
+
+  const matchedRecordId =
+    value.matchedRecordId;
+
+  if (
+    matchedRecordId !== null &&
+    typeof matchedRecordId !== "string"
+  ) {
+    throw new InvalidVerdictError(
+      "matchedRecordId must be null or a string"
+    );
   }
+
   if (
     typeof matchedRecordId === "string" &&
-    !candidateRecordIds.includes(matchedRecordId)
+    !candidateRecordIds.includes(
+      matchedRecordId
+    )
   ) {
     throw new InvalidVerdictError(
       `hallucinated matchedRecordId: ${matchedRecordId}`
     );
   }
 
-  const reason = v.reason;
-  if (typeof reason !== "string" || reason.trim() === "") {
-    throw new InvalidVerdictError("missing reason");
+  const reason = value.reason;
+
+  if (
+    typeof reason !== "string" ||
+    reason.trim() === ""
+  ) {
+    throw new InvalidVerdictError(
+      "missing reason"
+    );
   }
 
-  let evidence: RawVerdict["evidence"] = [];
-  if (v.evidence !== undefined && v.evidence !== null) {
-    if (!Array.isArray(v.evidence)) {
-      throw new InvalidVerdictError("evidence must be an array");
+  let evidence: DecisionResult["evidence"] = [];
+
+  if (
+    value.evidence !== undefined &&
+    value.evidence !== null
+  ) {
+    if (!Array.isArray(value.evidence)) {
+      throw new InvalidVerdictError(
+        "evidence must be an array"
+      );
     }
-    evidence = v.evidence.map((item) => {
-      const e = (item ?? {}) as Record<string, unknown>;
-      const value = e.value;
+
+    if (value.evidence.length > 3) {
+      throw new InvalidVerdictError(
+        "evidence must contain at most 3 items"
+      );
+    }
+
+    evidence = value.evidence.map((item) => {
+      if (
+        typeof item !== "object" ||
+        item === null ||
+        Array.isArray(item)
+      ) {
+        throw new InvalidVerdictError(
+          "invalid evidence item"
+        );
+      }
+
+      const e =
+        item as Record<string, unknown>;
+
+      const field =
+        typeof e.field === "string"
+          ? e.field
+          : "unknown";
+
+      const rawValue = e.value;
+
+      const actual =
+        typeof rawValue === "string" ||
+        typeof rawValue === "number"
+          ? rawValue
+          : null;
+
+      const detail =
+        typeof e.significance === "string"
+          ? e.significance
+          : undefined;
+
       return {
-        field: typeof e.field === "string" ? e.field : "unknown",
+        field,
         expected: null,
-        actual:
-          typeof value === "string" || typeof value === "number"
-            ? value
-            : null,
-        ...(typeof e.significance === "string"
-          ? { detail: e.significance }
-          : {}),
+        actual,
+        ...(detail ? { detail } : {}),
       };
     });
   }
 
   return {
-    decision: decision as ReconciliationDecision,
+    decision:
+      decision as ReconciliationDecision,
+
     confidence,
+
     matchedRecordId,
-    reason,
+
+    reason: reason.trim(),
+
     evidence,
   };
 }
 
-/**
- * Create the local Ollama-backed judge. Reads OLLAMA_BASE_URL /
- * OLLAMA_MODEL / OLLAMA_TIMEOUT_MS from the environment unless overridden.
- * Never throws at judgement time: every failure becomes the safe fallback.
- */
 export function createOllamaJudgeProvider(
   options: OllamaJudgeOptions = {}
 ): AiJudgeProvider {
-  const baseUrl = (
+  const baseUrl = normalizeBaseUrl(
     options.baseUrl ??
-    process.env.OLLAMA_BASE_URL ??
-    DEFAULT_BASE_URL
-  ).replace(/\/+$/, "");
-  const model = options.model ?? process.env.OLLAMA_MODEL ?? DEFAULT_MODEL;
-  const envTimeout = Number(process.env.OLLAMA_TIMEOUT_MS);
+      process.env.OLLAMA_BASE_URL
+  );
+
+  const model =
+    options.model ??
+    process.env.OLLAMA_MODEL ??
+    DEFAULT_MODEL;
+
+  const envTimeout =
+    Number(
+      process.env.OLLAMA_TIMEOUT_MS
+    );
+
   const timeoutMs =
     options.timeoutMs ??
-    (Number.isFinite(envTimeout) && envTimeout > 0
-      ? envTimeout
-      : DEFAULT_TIMEOUT_MS);
-  const doFetch: OllamaFetch =
-    options.fetchImpl ?? ((url, init) => fetch(url, init));
+    (
+      Number.isFinite(envTimeout) &&
+      envTimeout > 0
+        ? envTimeout
+        : DEFAULT_TIMEOUT_MS
+    );
 
-  async function generate(prompt: string): Promise<string> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const doFetch: OllamaFetch =
+    options.fetchImpl ??
+    ((url, init) =>
+      fetch(url, init));
+
+  async function generate(
+    prompt: string
+  ): Promise<string> {
+    const controller =
+      new AbortController();
+
+    const timer = setTimeout(
+      () => controller.abort(),
+      timeoutMs
+    );
+
     try {
-      const response = await doFetch(`${baseUrl}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          prompt,
-          stream: false,
-          format: "json",
-          options: { temperature: 0 },
-        }),
-        signal: controller.signal,
-      });
+      const response =
+        await doFetch(
+          `${baseUrl}/api/generate`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              model,
+
+              prompt,
+
+              stream: false,
+
+              format: "json",
+
+              keep_alive: "10m",
+
+              options: {
+                temperature: 0,
+                num_predict: NUM_PREDICT,
+              },
+            }),
+
+            signal:
+              controller.signal,
+          }
+        );
+
       if (!response.ok) {
-        throw new Error(`ollama http ${response.status}`);
+        throw new Error(
+          `Ollama HTTP ${response.status}`
+        );
       }
-      const body = JSON.parse(await response.text()) as { response?: unknown };
-      return typeof body.response === "string" ? body.response : "";
+
+      const responseText =
+        await response.text();
+
+      if (!responseText.trim()) {
+        throw new Error(
+          "Ollama returned an empty HTTP response"
+        );
+      }
+
+      let body: unknown;
+
+      try {
+        body =
+          JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          "Ollama returned malformed HTTP JSON"
+        );
+      }
+
+      if (
+        typeof body !== "object" ||
+        body === null ||
+        Array.isArray(body)
+      ) {
+        throw new Error(
+          "Ollama response is not an object"
+        );
+      }
+
+      const responseBody =
+        body as Record<string, unknown>;
+
+      const generated =
+        responseBody.response;
+
+      if (
+        typeof generated !== "string" ||
+        generated.trim() === ""
+      ) {
+        throw new Error(
+          "Ollama response field is missing or empty"
+        );
+      }
+
+      return generated;
     } finally {
       clearTimeout(timer);
     }
@@ -243,26 +489,77 @@ export function createOllamaJudgeProvider(
 
   return {
     name: `ollama:${model}`,
-    async judge(context: JudgeCandidateContext): Promise<DecisionResult> {
+
+    async judge(
+      context: JudgeCandidateContext
+    ): Promise<DecisionResult> {
       try {
-        const raw = await generate(buildJudgePrompt(context));
-        const verdict = parseAndValidateVerdict(
-          raw,
-          context.candidateRecordIds
-        );
+        const prompt =
+          buildJudgePrompt(context);
+
+        const raw =
+          await generate(prompt);
+
+        const verdict =
+          parseAndValidateVerdict(
+            raw,
+            context.candidateRecordIds
+          );
+
         return {
-          transactionId: context.paymentId,
-          decision: verdict.decision,
-          confidence: verdict.confidence,
-          reason: verdict.reason,
-          evidence: verdict.evidence,
-          matchedRecordId: verdict.matchedRecordId,
+          transactionId:
+            context.paymentId,
+
+          decision:
+            verdict.decision,
+
+          confidence:
+            verdict.confidence,
+
+          reason:
+            verdict.reason,
+
+          evidence:
+            verdict.evidence,
+
+          matchedRecordId:
+            verdict.matchedRecordId,
+
           source: "OLLAMA",
         };
-      } catch {
-        // Fail safe: unavailable, timeout, malformed, or invalid output
-        // must NEVER become an approval. Escalate to human review.
-        return createSafeFallback(context.paymentId);
+      } catch (error) {
+        const errorName =
+          error instanceof Error
+            ? error.name
+            : typeof error;
+
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : String(error);
+
+        console.error(
+          "[OLLAMA JUDGE ERROR]",
+          JSON.stringify({
+            transactionId:
+              context.paymentId,
+
+            model,
+
+            url:
+              `${baseUrl}/api/generate`,
+
+            timeoutMs,
+
+            errorName,
+
+            errorMessage,
+          })
+        );
+
+        return createSafeFallback(
+          context.paymentId
+        );
       }
     },
   };

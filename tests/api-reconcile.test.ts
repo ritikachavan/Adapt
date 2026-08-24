@@ -115,4 +115,307 @@ describe("POST /api/reconcile", () => {
     expect(judge).toHaveBeenCalled();
     expect(escalated.length).toBeGreaterThan(0);
   });
+
+  it("caps escalation at default 4 REVIEW cases and leaves excess as REVIEW", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.9,
+          reason: "capped test approval",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    const response = await runReconciliation({
+      provider: { name: "stub-bounded", judge },
+      ai: true,
+    });
+
+    // Default max escalations is 4
+    expect(judge).toHaveBeenCalledTimes(4);
+    expect(response.aiMetrics?.deterministicReviewCount).toBeGreaterThan(4);
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(4);
+    expect(response.aiMetrics?.aiSuccessCount).toBe(4);
+    expect(response.aiMetrics?.aiFallbackCount).toBe(0);
+    expect(response.aiMetrics?.aiSkippedCount).toBe(
+      (response.aiMetrics?.deterministicReviewCount ?? 0) - 4
+    );
+    expect(response.aiMetrics?.aiEnabled).toBe(true);
+    expect(response.aiMetrics?.aiProvider).toBe("stub-bounded");
+
+    // Excess REVIEW cases remain REVIEW with DETERMINISTIC source
+    const remainingReviews = response.decisions.filter(
+      (d) => d.decision === "REVIEW" && d.source === "DETERMINISTIC"
+    );
+    expect(remainingReviews.length).toBe(response.aiMetrics?.aiSkippedCount);
+  });
+
+  it("respects custom maxEscalations", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.85,
+          reason: "custom limit",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    const response = await runReconciliation({
+      provider: { name: "custom-stub", judge },
+      ai: true,
+      maxEscalations: 3,
+    });
+
+    expect(judge).toHaveBeenCalledTimes(3);
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(3);
+    expect(response.aiMetrics?.aiSkippedCount).toBe(
+      (response.aiMetrics?.deterministicReviewCount ?? 0) - 3
+    );
+  });
+
+  it("invokes zero AI calls when maxEscalations=0 even with ai=true", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.9,
+          reason: "should never run",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    const response = await runReconciliation({
+      provider: { name: "zero-stub", judge },
+      ai: true,
+      maxEscalations: 0,
+    });
+
+    expect(judge).toHaveBeenCalledTimes(0);
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(0);
+    expect(response.aiMetrics?.aiSuccessCount).toBe(0);
+    expect(response.aiMetrics?.aiFallbackCount).toBe(0);
+    expect(response.aiMetrics?.aiSkippedCount).toBe(
+      response.aiMetrics?.deterministicReviewCount
+    );
+    expect(response.aiMetrics?.aiEnabled).toBe(true);
+    expect(
+      response.decisions.every(
+        (d) => d.source === "DETERMINISTIC"
+      )
+    ).toBe(true);
+  });
+
+  it("clamps negative maxEscalations to 0", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.9,
+          reason: "should never run",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    const response = await runReconciliation({
+      provider: { name: "neg-stub", judge },
+      ai: true,
+      maxEscalations: -5,
+    });
+
+    expect(judge).toHaveBeenCalledTimes(0);
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(0);
+    expect(response.aiMetrics?.aiSkippedCount).toBe(
+      response.aiMetrics?.deterministicReviewCount
+    );
+  });
+
+  it("uses default maxEscalations when given NaN", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.9,
+          reason: "default test",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    const response = await runReconciliation({
+      provider: { name: "nan-stub", judge },
+      ai: true,
+      maxEscalations: Number.NaN,
+    });
+
+    expect(judge).toHaveBeenCalledTimes(4);
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(4);
+  });
+
+  it("returns HTTP 400 for an array body", async () => {
+    const response = await POST(
+      new Request(BASE_URL, {
+        method: "POST",
+        body: JSON.stringify([1, 2, 3]),
+      })
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns HTTP 400 for a null body", async () => {
+    const response = await POST(
+      new Request(BASE_URL, {
+        method: "POST",
+        body: "null",
+      })
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns HTTP 200 for ai=false", async () => {
+    const response = await POST(
+      new Request(BASE_URL, {
+        method: "POST",
+        body: JSON.stringify({ ai: false }),
+      })
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      aiMetrics: { aiEnabled: boolean };
+    };
+    expect(body.aiMetrics.aiEnabled).toBe(false);
+  });
+
+  it("degrades safely when the AI provider throws", async () => {
+    const judge = vi.fn(async () => {
+      throw new Error("Ollama exploded");
+    });
+    const response = await runReconciliation({
+      provider: { name: "throwing-stub", judge },
+      ai: true,
+      maxEscalations: 2,
+    });
+
+    expect(judge).toHaveBeenCalledTimes(2);
+    expect(response.aiMetrics?.aiFallbackCount).toBe(2);
+    expect(response.aiMetrics?.aiSuccessCount).toBe(0);
+    const escalated = response.decisions.filter(
+      (d) => d.source === "OLLAMA"
+    );
+    expect(escalated).toHaveLength(2);
+    for (const d of escalated) {
+      expect(d.decision).toBe("REVIEW");
+      expect(d.confidence).toBe(0);
+    }
+  });
+
+  it("summary counts always sum to total", async () => {
+    const response = await runReconciliation();
+    const summed =
+      response.summary.matched +
+      response.summary.reviewed +
+      response.summary.mismatched +
+      response.summary.missing +
+      response.summary.refunded;
+    expect(summed).toBe(response.summary.total);
+    expect(response.summary.total).toBe(
+      response.decisions.length
+    );
+  });
+
+  it("every decision has valid confidence in [0,1]", async () => {
+    const response = await runReconciliation();
+    for (const d of response.decisions) {
+      expect(d.confidence).toBeGreaterThanOrEqual(0);
+      expect(d.confidence).toBeLessThanOrEqual(1);
+      expect(Number.isFinite(d.confidence)).toBe(true);
+    }
+  });
+
+  it("every decision has a valid decision label", async () => {
+    const validLabels = [
+      "MATCHED",
+      "REVIEW",
+      "MISMATCH",
+      "MISSING",
+      "REFUNDED",
+    ];
+    const response = await runReconciliation();
+    for (const d of response.decisions) {
+      expect(validLabels).toContain(d.decision);
+    }
+  });
+
+  it("only REVIEW cases are escalated to AI", async () => {
+    const escalatedIds: string[] = [];
+    const judge = vi.fn(
+      async (ctx: {
+        paymentId: string;
+        candidateRecordIds: string[];
+      }) => {
+        escalatedIds.push(ctx.paymentId);
+        return {
+          transactionId: ctx.paymentId,
+          decision: "MATCHED" as const,
+          confidence: 0.9,
+          reason: "escalation test",
+          evidence: [],
+          matchedRecordId:
+            ctx.candidateRecordIds[0] ?? null,
+          source: "OLLAMA" as const,
+        } satisfies DecisionResult;
+      }
+    );
+    const response = await runReconciliation({
+      provider: { name: "escalation-stub", judge },
+      ai: true,
+    });
+
+    // Get deterministic-only baseline to know which are REVIEW
+    const baseline = await runReconciliation();
+    const baselineReviews = baseline.decisions
+      .filter((d) => d.decision === "REVIEW")
+      .map((d) => d.transactionId);
+
+    for (const id of escalatedIds) {
+      expect(baselineReviews).toContain(id);
+    }
+    expect(response.summary.total).toBe(100);
+  });
+
+  it("deterministic mode never invokes the AI provider", async () => {
+    const judge = vi.fn(
+      async (ctx: { paymentId: string }) =>
+        ({
+          transactionId: ctx.paymentId,
+          decision: "MATCHED",
+          confidence: 0.9,
+          reason: "should not run",
+          evidence: [],
+          matchedRecordId: null,
+          source: "OLLAMA",
+        }) satisfies DecisionResult
+    );
+    // No provider and no ai flag => pure deterministic
+    const response = await runReconciliation();
+
+    expect(response.aiMetrics?.aiEnabled).toBe(false);
+    expect(response.aiMetrics?.aiProvider).toBeNull();
+    expect(response.aiMetrics?.aiEscalatedCount).toBe(0);
+    expect(
+      response.decisions.every(
+        (d) => d.source === "DETERMINISTIC"
+      )
+    ).toBe(true);
+  });
 });

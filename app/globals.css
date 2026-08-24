@@ -1,3 +1,39 @@
 @import "tailwindcss";
 
-/* TODO(app/styles): global design tokens, base typography, and theme variables for ADAPT. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes stage-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes connector-flow {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}
+
+.animate-stage-pulse {
+  animation: stage-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-connector-flow {
+  background: linear-gradient(90deg, #818cf8 0%, #c7d2fe 50%, #818cf8 100%);
+  background-size: 200% 100%;
+  animation: connector-flow 1.5s linear infinite;
+}
