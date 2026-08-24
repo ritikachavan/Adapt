@@ -35,7 +35,7 @@ function replayUrl(transactionId: string): string {
 
 describe("GET /api/audit (decision replay)", () => {
   it("loads a real transaction with complete financial records", async () => {
-    const res = await auditGet(new Request(replayUrl("pay_1")));
+    const res = await auditGet(new Request(replayUrl("pay_0001")));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       found: boolean;
@@ -49,15 +49,15 @@ describe("GET /api/audit (decision replay)", () => {
       deterministic: { present: boolean; decision: string };
     };
     expect(body.found).toBe(true);
-    expect(body.records.payment?.id).toBe("pay_1");
-    expect(body.records.order?.id).toBe("ord_1");
+    expect(body.records.payment?.id).toBe("pay_0001");
+    expect(body.records.order?.id).toBe("ord_0001");
     expect(Array.isArray(body.records.settlements)).toBe(true);
     expect(body.deterministic.present).toBe(true);
     expect(typeof body.deterministic.decision).toBe("string");
   });
 
   it("shows deterministic decision, confidence, reason and evidence", async () => {
-    const res = await auditGet(new Request(replayUrl("pay_1")));
+    const res = await auditGet(new Request(replayUrl("pay_0001")));
     const body = (await res.json()) as {
       deterministic: {
         decision: string;
@@ -74,7 +74,7 @@ describe("GET /api/audit (decision replay)", () => {
     expect(body.deterministic.source).toBe("DETERMINISTIC");
   });
   it("does not fabricate an AI stage when none was invoked", async () => {
-    const res = await auditGet(new Request(replayUrl("pay_1")));
+    const res = await auditGet(new Request(replayUrl("pay_0001")));
     const body = (await res.json()) as {
       ai: { invoked: boolean; status: string };
     };
@@ -95,7 +95,7 @@ describe("GET /api/audit (decision replay)", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          decisionId: "pay_1",
+          decisionId: "pay_0001",
           correctedDecision: "MISMATCH",
           correctionType: "WRONG_MATCH",
           explanation: "Judge replay seeding: settlement is clearly short.",
@@ -104,7 +104,7 @@ describe("GET /api/audit (decision replay)", () => {
     );
     expect(seed.status).toBe(201);
 
-    const res = await auditGet(new Request(replayUrl("pay_1")));
+    const res = await auditGet(new Request(replayUrl("pay_0001")));
     const body = (await res.json()) as {
       humanReview: {
         present: boolean;
