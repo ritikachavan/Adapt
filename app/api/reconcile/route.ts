@@ -31,6 +31,10 @@ import {
   type JudgeCandidateContext,
 } from "../../../lib/ai/provider";
 
+import {
+  scoreDecision,
+} from "../../../lib/risk/riskScoring";
+
 export interface ReconciliationResponseSummary {
   total: number;
   matched: number;
@@ -610,6 +614,18 @@ export async function runReconciliation(
         d.decision ===
         decision
     ).length;
+  }
+
+  // Apply ML-assisted risk scoring to all decisions
+  for (const d of decisions) {
+    const assessment = scoreDecision(d);
+    if (assessment) {
+      d.risk = {
+        score: assessment.score,
+        level: assessment.level,
+        signals: assessment.signals,
+      };
+    }
   }
 
   return {

@@ -88,6 +88,12 @@ export interface DecisionResult {
   /** Counterpart record(s) examined, when any exist ("stl_a+stl_b" for splits). */
   matchedRecordId: string | null;
   source: DecisionSource;
+  /** ML-assisted risk prioritization. Only present for non-MATCHED decisions. */
+  risk?: {
+    score: number;
+    level: "LOW" | "MEDIUM" | "HIGH";
+    signals: string[];
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import DecisionBadge from "../ui/DecisionBadge";
 
@@ -9,6 +9,7 @@ export interface ReviewItem {
   reason: string;
   source: string;
   evidence: Array<{ field: string }>;
+  risk?: { score: number; level: string; signals: string[] };
 }
 
 interface Props {
@@ -16,8 +17,23 @@ interface Props {
   onItemClick: (item: ReviewItem) => void;
 }
 
+const RISK_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
+const RISK_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
+  HIGH: { bg: "bg-rose-100", text: "text-rose-700", dot: "bg-rose-500" },
+  MEDIUM: { bg: "bg-amber-100", text: "text-amber-700", dot: "bg-amber-500" },
+  LOW: { bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-emerald-500" },
+};
+
 export default function DashboardReviewQueue({ decisions, onItemClick }: Props) {
-  const reviews = decisions.filter((d) => d.decision === "REVIEW");
+  const reviews = decisions
+    .filter((d) => d.decision === "REVIEW")
+    .sort((a, b) => {
+      const aOrder = RISK_ORDER[a.risk?.level ?? "LOW"] ?? 3;
+      const bOrder = RISK_ORDER[b.risk?.level ?? "LOW"] ?? 3;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return (b.risk?.score ?? 0) - (a.risk?.score ?? 0);
+    });
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -39,25 +55,36 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {reviews.slice(0, 10).map((r) => (
-            <li key={r.transactionId}>
-              <button type="button" onClick={() => onItemClick(r)}
-                className="w-full px-5 py-3 text-left transition hover:bg-indigo-50/50 focus-visible:bg-indigo-50/50 focus-visible:outline-none">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-slate-900">{r.transactionId}</span>
-                    <DecisionBadge decision={r.decision} />
+          {reviews.slice(0, 10).map((r) => {
+            const riskStyle = RISK_STYLES[r.risk?.level ?? "LOW"] ?? RISK_STYLES.LOW;
+            return (
+              <li key={r.transactionId}>
+                <button type="button" onClick={() => onItemClick(r)}
+                  className="w-full px-5 py-3 text-left transition hover:bg-indigo-50/50 focus-visible:bg-indigo-50/50 focus-visible:outline-none">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-slate-900">{r.transactionId}</span>
+                      <DecisionBadge decision={r.decision} />
+                      {r.risk && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${riskStyle.bg} ${riskStyle.text}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${riskStyle.dot}`} />
+                          {r.risk.level} {r.risk.score}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold tabular-nums text-slate-600">{Math.round(r.confidence * 100)}%</span>
+                      <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${r.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{r.source}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold tabular-nums text-slate-600">{Math.round(r.confidence * 100)}%</span>
-                    <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${r.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{r.source}</span>
-                    <span className="text-[11px] text-slate-500">{r.evidence.length} evidence</span>
-                  </div>
-                </div>
-                <p className="mt-1 truncate text-xs text-slate-600">{r.reason}</p>
-              </button>
-            </li>
-          ))}
+                  {r.risk && r.risk.signals.length > 0 && (
+                    <p className="mt-1 truncate text-[11px] text-slate-500">{r.risk.signals[0]}</p>
+                  )}
+                  <p className="mt-0.5 truncate text-xs text-slate-600">{r.reason}</p>
+                </button>
+              </li>
+            );
+          })}
           {reviews.length > 10 && (
             <li className="px-5 py-2 text-center text-xs text-slate-500">+{reviews.length - 10} more cases</li>
           )}

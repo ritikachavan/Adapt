@@ -18,6 +18,7 @@ interface Decision {
   matchedRecordId: string | null;
   source: string;
   evidence: Array<{ field: string; expected?: string | number | null; actual?: string | number | null; detail?: string }>;
+  risk?: { score: number; level: string; signals: string[] };
 }
 
 interface Props {
@@ -99,6 +100,16 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
     ? Math.round((aiMetrics.aiFallbackCount / aiMetrics.aiEscalatedCount) * 100)
     : 0;
 
+
+  // Risk distribution from actual risk scores
+  const riskDist = { high: 0, medium: 0, low: 0 };
+  for (const d of decisions) {
+    if (d.risk) {
+      if (d.risk.level === "HIGH") riskDist.high++;
+      else if (d.risk.level === "MEDIUM") riskDist.medium++;
+      else riskDist.low++;
+    }
+  }
   const exceptions = [
     { label: "REVIEW", count: summary.reviewed, pct: pct(summary.reviewed), color: "bg-amber-500", text: "text-amber-700" },
     { label: "MISMATCH", count: summary.mismatched, pct: pct(summary.mismatched), color: "bg-rose-500", text: "text-rose-700" },
@@ -160,6 +171,28 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
           </div>
         </div>
 
+
+        {/* Risk Distribution */}
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Risk Distribution</h3>
+          <p className="mt-1 text-[11px] text-slate-400">ML-assisted investigation priority</p>
+          <div className="mt-3 space-y-2">
+            {[{ label: "HIGH", count: riskDist.high, color: "bg-rose-500", text: "text-rose-700" },
+              { label: "MEDIUM", count: riskDist.medium, color: "bg-amber-500", text: "text-amber-700" },
+              { label: "LOW", count: riskDist.low, color: "bg-emerald-500", text: "text-emerald-700" }].map((r) => {
+              const max = Math.max(riskDist.high, riskDist.medium, riskDist.low, 1);
+              return (
+                <div key={r.label} className="flex items-center gap-3">
+                  <span className={`w-16 text-xs font-semibold ${r.text}`}>{r.label}</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100">
+                    <div className={`h-2 rounded-full ${r.color}`} style={{ width: `${Math.round((r.count / max) * 100)}%` }} />
+                  </div>
+                  <span className="w-8 text-right text-xs font-semibold tabular-nums text-slate-700">{r.count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         {/* AI Safety + Audit Signals */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-4">
@@ -215,3 +248,7 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
     </section>
   );
 }
+
+
+
+

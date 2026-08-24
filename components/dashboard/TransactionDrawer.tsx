@@ -18,6 +18,7 @@ export interface DrawerDecision {
   matchedRecordId: string | null;
   source: string;
   evidence: EvidenceItem[];
+  risk?: { score: number; level: string; signals: string[] };
 }
 
 interface Props {
@@ -96,6 +97,7 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
             ) : <p className="mt-1.5 text-sm text-slate-400">No record matched</p>}
           </section>
           <EvidenceTimeline evidence={decision.evidence} />
+          {decision.risk && <RiskIntelligence risk={decision.risk} />}
           <ExplainDecision decision={decision} c={c} />
         </div>
       </aside>
@@ -169,3 +171,48 @@ function ExplainDecision({ decision, c }: { decision: DrawerDecision; c: { b: st
     </section>
   );
 }
+
+
+function RiskIntelligence({ risk }: { risk: { score: number; level: string; signals: string[] } }) {
+  const levelStyles: Record<string, { bg: string; border: string; text: string; bar: string }> = {
+    HIGH: { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", bar: "bg-rose-500" },
+    MEDIUM: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", bar: "bg-amber-500" },
+    LOW: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", bar: "bg-emerald-500" },
+  };
+  const s = levelStyles[risk.level] ?? levelStyles.LOW;
+  return (
+    <section className={`rounded-lg border ${s.border} ${s.bg} p-4`}>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Risk Intelligence</h3>
+      <div className="mt-2 flex items-center gap-3">
+        <span className={`text-2xl font-bold tabular-nums ${s.text}`}>{risk.score}</span>
+        <span className="text-xs text-slate-500">/ 100</span>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.bg} ${s.text} ring-1 ring-inset ${s.border}`}>
+          {risk.level}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 w-full rounded-full bg-white">
+        <div className={`h-1.5 rounded-full ${s.bar} transition-all duration-500`} style={{ width: `${risk.score}%` }} />
+      </div>
+      {risk.signals.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Investigation Priority</p>
+          <ul className="mt-1.5 space-y-1">
+            {risk.signals.slice(0, 3).map((sig, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
+                <span className={`mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${s.bar}`} />
+                {sig}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+
+
+
+
+
