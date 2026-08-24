@@ -19,6 +19,8 @@ export interface DrawerDecision {
   source: string;
   evidence: EvidenceItem[];
   risk?: { score: number; level: string; signals: string[] };
+  anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string; explanation: string; evidence: string[] }> };
+  resolution?: { priority: string; action: string; title: string; rationale: string; steps: Array<{ order: number; action: string }>; supportingSignals: string[] };
 }
 
 interface Props {
@@ -98,6 +100,8 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
           </section>
           <EvidenceTimeline evidence={decision.evidence} />
           {decision.risk && <RiskIntelligence risk={decision.risk} />}
+          {decision.anomaly && <AnomalySignals anomaly={decision.anomaly} />}
+          {decision.resolution && <ResolutionIntelligence resolution={decision.resolution} />}
           <ExplainDecision decision={decision} c={c} />
         </div>
       </aside>
@@ -211,6 +215,105 @@ function RiskIntelligence({ risk }: { risk: { score: number; level: string; sign
 }
 
 
+
+
+
+
+function AnomalySignals({ anomaly }: { anomaly: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string; explanation: string; evidence: string[] }> } }) {
+  if (!anomaly.isAnomalous) {
+    return (
+      <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Anomaly Intelligence</h3>
+        <p className="mt-2 text-sm text-emerald-700">No significant anomaly detected.</p>
+      </section>
+    );
+  }
+
+  const levelStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    HIGH: { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", dot: "bg-rose-500" },
+    MEDIUM: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", dot: "bg-amber-500" },
+    LOW: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", dot: "bg-blue-500" },
+  };
+  const s = levelStyles[anomaly.severity ?? "LOW"] ?? levelStyles.LOW;
+
+  return (
+    <section className={`rounded-lg border ${s.border} ${s.bg} p-4`}>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Anomaly Intelligence</h3>
+      <div className="mt-2 flex items-center gap-3">
+        <span className={`text-2xl font-bold tabular-nums ${s.text}`}>{anomaly.anomalyScore}</span>
+        <span className="text-xs text-slate-500">/ 100</span>
+        {anomaly.severity && (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.bg} ${s.text} ring-1 ring-inset ${s.border}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+            {anomaly.severity}
+          </span>
+        )}
+      </div>
+      <div className="mt-3 space-y-2">
+        {anomaly.signals.slice(0, 3).map((sig, i) => (
+          <div key={i} className="rounded-md bg-white/60 p-2">
+            <p className="text-xs font-semibold text-slate-800">{sig.title}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{sig.explanation}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+function ResolutionIntelligence({ resolution }: { resolution: { priority: string; action: string; title: string; rationale: string; steps: Array<{ order: number; action: string }>; supportingSignals: string[] } }) {
+  const priorityStyles: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    HIGH: { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", dot: "bg-rose-500" },
+    MEDIUM: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", dot: "bg-amber-500" },
+    LOW: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", dot: "bg-emerald-500" },
+  };
+  const s = priorityStyles[resolution.priority] ?? priorityStyles.LOW;
+
+  return (
+    <section className={`rounded-lg border ${s.border} ${s.bg} p-4`}>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Resolution Intelligence</h3>
+      <div className="mt-2 flex items-center gap-2">
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.bg} ${s.text} ring-1 ring-inset ${s.border}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+          {resolution.priority} PRIORITY
+        </span>
+      </div>
+      <p className={`mt-2 text-sm font-semibold ${s.text}`}>{resolution.action}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-600">{resolution.rationale}</p>
+      {resolution.steps.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Recommended Checks</p>
+          <ol className="mt-1.5 space-y-1">
+            {resolution.steps.map((step) => (
+              <li key={step.order} className="flex items-start gap-2 text-xs text-slate-700">
+                <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-white text-[9px] font-bold text-slate-500">{step.order}</span>
+                {step.action}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {resolution.supportingSignals.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Supporting Signals</p>
+          <ul className="mt-1.5 space-y-0.5">
+            {resolution.supportingSignals.slice(0, 3).map((sig, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600">
+                <span className={`mt-0.5 h-1 w-1 flex-shrink-0 rounded-full ${s.dot}`} />
+                {sig}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="mt-3 rounded-md bg-white/60 p-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Decision Required</p>
+        <p className="mt-0.5 text-[11px] text-slate-600">This recommendation requires human review and approval before any action is taken.</p>
+      </div>
+    </section>
+  );
+}
 
 
 

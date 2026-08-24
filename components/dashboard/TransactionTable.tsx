@@ -11,6 +11,7 @@ export interface TransactionRow {
   matchedRecordId: string | null;
   source: string;
   evidence: Array<{ field: string; expected?: string | number | null; actual?: string | number | null; detail?: string }>;
+  anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
 }
 
 interface Props { decisions: TransactionRow[]; onRowClick: (row: TransactionRow) => void; activeFilter?: string | null; onFilterApplied?: () => void; }
@@ -123,3 +124,4 @@ function SourceBadge({ source }: { source: string }) {
   const s: Record<string, string> = { DETERMINISTIC: "bg-slate-100 text-slate-700", OLLAMA: "bg-violet-100 text-violet-700", HUMAN_REVIEW: "bg-indigo-100 text-indigo-700" };
   return <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${s[source] ?? "bg-slate-100 text-slate-600"}`}>{source}</span>;
 }
+

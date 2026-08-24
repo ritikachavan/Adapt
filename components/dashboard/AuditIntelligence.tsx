@@ -19,6 +19,8 @@ interface Decision {
   source: string;
   evidence: Array<{ field: string; expected?: string | number | null; actual?: string | number | null; detail?: string }>;
   risk?: { score: number; level: string; signals: string[] };
+  anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
+  resolution?: { priority: string; action: string; title: string };
 }
 
 interface Props {
@@ -110,6 +112,42 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
       else riskDist.low++;
     }
   }
+
+  // Anomaly distribution from actual anomaly data
+  const anomalyDist = { high: 0, medium: 0, low: 0, total: 0 };
+  for (const d of decisions) {
+    if (d.anomaly?.isAnomalous && d.anomaly.severity) {
+      anomalyDist.total++;
+      if (d.anomaly.severity === "HIGH") anomalyDist.high++;
+      else if (d.anomaly.severity === "MEDIUM") anomalyDist.medium++;
+      else anomalyDist.low++;
+    }
+  }
+  const anomalyRate = total > 0 ? Math.round((anomalyDist.total / total) * 100) : 0;
+  // Find most common anomaly type
+  const anomalyTypeCounts: Record<string, number> = {};
+  for (const d of decisions) {
+    if (d.anomaly?.signals) {
+      for (const sig of d.anomaly.signals) {
+        anomalyTypeCounts[sig.type] = (anomalyTypeCounts[sig.type] ?? 0) + 1;
+      }
+    }
+  }
+  const topAnomalyType = Object.entries(anomalyTypeCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // Resolution priority distribution
+  const resolutionDist = { high: 0, medium: 0, low: 0 };
+  const actionCounts: Record<string, number> = {};
+  for (const d of decisions) {
+    if (d.resolution) {
+      if (d.resolution.priority === "HIGH") resolutionDist.high++;
+      else if (d.resolution.priority === "MEDIUM") resolutionDist.medium++;
+      else resolutionDist.low++;
+      actionCounts[d.resolution.action] = (actionCounts[d.resolution.action] ?? 0) + 1;
+    }
+  }
+  const topAction = Object.entries(actionCounts).sort((a, b) => b[1] - a[1])[0];
+
   const exceptions = [
     { label: "REVIEW", count: summary.reviewed, pct: pct(summary.reviewed), color: "bg-amber-500", text: "text-amber-700" },
     { label: "MISMATCH", count: summary.mismatched, pct: pct(summary.mismatched), color: "bg-rose-500", text: "text-rose-700" },
@@ -193,6 +231,49 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
             })}
           </div>
         </div>
+
+        {/* Anomaly Intelligence */}
+        <div className="rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Anomaly Intelligence</h3>
+            <span className="text-xs font-semibold tabular-nums text-slate-600">{anomalyRate}% anomaly rate</span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[{ label: "HIGH", count: anomalyDist.high, color: "text-rose-700", bg: "bg-rose-50" },
+              { label: "MEDIUM", count: anomalyDist.medium, color: "text-amber-700", bg: "bg-amber-50" },
+              { label: "LOW", count: anomalyDist.low, color: "text-blue-700", bg: "bg-blue-50" }].map((a) => (
+              <div key={a.label} className={`rounded-md ${a.bg} px-2.5 py-1.5 text-center`}>
+                <p className="text-[10px] font-medium text-slate-500">{a.label}</p>
+                <p className={`text-sm font-bold tabular-nums ${a.color}`}>{a.count}</p>
+              </div>
+            ))}
+          </div>
+          {topAnomalyType && (
+            <p className="mt-2 text-[11px] text-slate-600">Most common: <span className="font-semibold">{topAnomalyType[0].replace(/_/g, " ")}</span> ({topAnomalyType[1]})</p>
+          )}
+          {anomalyDist.total === 0 && (
+            <p className="mt-2 text-[11px] text-emerald-700">No significant anomalies detected.</p>
+          )}
+        </div>
+
+        {/* Resolution Priorities */}
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resolution Priorities</h3>
+          <p className="mt-1 text-[11px] text-slate-400">Investigation priority distribution</p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[{ label: "HIGH", count: resolutionDist.high, color: "text-rose-700", bg: "bg-rose-50" },
+              { label: "MEDIUM", count: resolutionDist.medium, color: "text-amber-700", bg: "bg-amber-50" },
+              { label: "LOW", count: resolutionDist.low, color: "text-emerald-700", bg: "bg-emerald-50" }].map((r) => (
+              <div key={r.label} className={`rounded-md ${r.bg} px-2.5 py-1.5 text-center`}>
+                <p className="text-[10px] font-medium text-slate-500">{r.label}</p>
+                <p className={`text-sm font-bold tabular-nums ${r.color}`}>{r.count}</p>
+              </div>
+            ))}
+          </div>
+          {topAction && (
+            <p className="mt-2 text-[11px] text-slate-600">Most common: <span className="font-semibold">{topAction[0]}</span> ({topAction[1]})</p>
+          )}
+        </div>
         {/* AI Safety + Audit Signals */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-4">
@@ -248,6 +329,15 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
     </section>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

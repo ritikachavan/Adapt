@@ -10,6 +10,8 @@ export interface ReviewItem {
   source: string;
   evidence: Array<{ field: string }>;
   risk?: { score: number; level: string; signals: string[] };
+  anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
+  resolution?: { priority: string; action: string; title: string };
 }
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
 }
 
 const RISK_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const ANOMALY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
 const RISK_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
   HIGH: { bg: "bg-rose-100", text: "text-rose-700", dot: "bg-rose-500" },
@@ -80,6 +83,9 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
                   {r.risk && r.risk.signals.length > 0 && (
                     <p className="mt-1 truncate text-[11px] text-slate-500">{r.risk.signals[0]}</p>
                   )}
+                  {r.resolution && (
+                    <p className="mt-0.5 truncate text-[11px] text-indigo-600 font-medium">{'\u2192'} {r.resolution.action}</p>
+                  )}
                   <p className="mt-0.5 truncate text-xs text-slate-600">{r.reason}</p>
                 </button>
               </li>
@@ -93,3 +99,7 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
     </section>
   );
 }
+
+
+
+

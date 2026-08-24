@@ -35,6 +35,14 @@ import {
   scoreDecision,
 } from "../../../lib/risk/riskScoring";
 
+import {
+  analyzeDecision,
+} from "../../../lib/risk/anomalyDetection";
+
+import {
+  recommendResolution,
+} from "../../../lib/resolution/resolutionRecommendations";
+
 export interface ReconciliationResponseSummary {
   total: number;
   matched: number;
@@ -625,6 +633,22 @@ export async function runReconciliation(
         level: assessment.level,
         signals: assessment.signals,
       };
+    }
+  }
+
+  // Apply anomaly detection to all decisions
+  for (const d of decisions) {
+    const anomaly = analyzeDecision(d);
+    if (anomaly) {
+      d.anomaly = anomaly;
+    }
+  }
+
+  // Apply resolution recommendations to all decisions
+  for (const d of decisions) {
+    const resolution = recommendResolution(d);
+    if (resolution) {
+      d.resolution = resolution;
     }
   }
 

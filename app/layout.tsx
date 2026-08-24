@@ -7,9 +7,9 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ADAPT — Adaptive AI Finance Controller",
+  title: "ADAPT — Financial Reconciliation & Control Intelligence",
   description:
-    "Deterministic reconciliation, a local AI judge for ambiguous cases, human review, and correction memory — fully local.",
+    "Turn reconciliation exceptions into explainable, risk-prioritized investigations. Deterministic rules first, local AI for ambiguity, humans stay in control.",
 };
 
 const NAV_ITEMS = [

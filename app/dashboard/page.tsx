@@ -57,7 +57,7 @@ export default function DashboardPage() {
       setData((await res.json()) as ReconcileResponse);
       setPipelineStatus("COMPLETE");
     } catch {
-      setError("Could not reach the reconciliation API.");
+      setError("Could not reach the reconciliation API. Ensure the server is running and try again.");
       setPipelineStatus("IDLE");
     } finally {
       setLoading(false);
@@ -72,13 +72,10 @@ export default function DashboardPage() {
 
   const handleStageClick = useCallback((filter: string) => {
     setTableFilter(filter);
-    const el = document.getElementById("transaction-table");
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("transaction-table")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  const handleFilterApplied = useCallback(() => {
-    setTableFilter(null);
-  }, []);
+  const handleFilterApplied = useCallback(() => { setTableFilter(null); }, []);
 
   const pipelineData: PipelineData | null = data ? {
     total: data.summary.total,
@@ -91,15 +88,29 @@ export default function DashboardPage() {
     aiSuccessCount: data.aiMetrics.aiSuccessCount,
     aiFallbackCount: data.aiMetrics.aiFallbackCount,
     aiEnabled: data.aiMetrics.aiEnabled,
+    anomalyCount: data.decisions.filter((d) => d.anomaly?.isAnomalous).length,
   } : null;
 
   if (error) {
     return (
       <div className="space-y-6">
         <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={loading} aiMode={aiMode} hasData={false} />
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4 flex items-center gap-3">
-          <p className="flex-1 text-sm font-medium text-rose-800">{error}</p>
-          <button type="button" onClick={() => void run(aiMode)} className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700">Retry</button>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-rose-100">
+              <svg className="h-4 w-4 text-rose-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-rose-800">Connection Error</p>
+              <p className="mt-1 text-sm text-rose-700">{error}</p>
+            </div>
+            <button type="button" onClick={() => void run(aiMode)}
+              className="rounded-md bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700">
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -108,12 +119,15 @@ export default function DashboardPage() {
   if (loading && !data) {
     return (
       <div className="space-y-6">
-        <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={true} aiMode={false} hasData={false} />
+        <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={true} aiMode={aiMode} hasData={false} />
         <ReconciliationPipeline status={pipelineStatus} data={null} aiMode={aiMode} />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Array.from({ length: 8 }, (_, i) => (<div key={i} className="h-24 animate-pulse rounded-xl bg-white shadow-sm" />))}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.from({ length: 2 }, (_, i) => (<div key={i} className="h-28 animate-pulse rounded-xl bg-white shadow-sm" />))}
         </div>
-        <div className="h-64 animate-pulse rounded-xl bg-white shadow-sm" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }, (_, i) => (<div key={i} className="h-20 animate-pulse rounded-xl bg-white shadow-sm" />))}
+        </div>
+        <div className="h-48 animate-pulse rounded-xl bg-white shadow-sm" />
       </div>
     );
   }

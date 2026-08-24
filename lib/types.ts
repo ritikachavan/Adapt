@@ -94,6 +94,28 @@ export interface DecisionResult {
     level: "LOW" | "MEDIUM" | "HIGH";
     signals: string[];
   };
+  /** Anomaly & pattern intelligence. Only present for non-MATCHED decisions. */
+  anomaly?: {
+    isAnomalous: boolean;
+    anomalyScore: number;
+    severity: "LOW" | "MEDIUM" | "HIGH" | null;
+    signals: Array<{
+      type: string;
+      severity: "LOW" | "MEDIUM" | "HIGH";
+      title: string;
+      explanation: string;
+      evidence: string[];
+    }>;
+  };
+  /** Resolution recommendation. Only present for non-MATCHED decisions. */
+  resolution?: {
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    action: string;
+    title: string;
+    rationale: string;
+    steps: Array<{ order: number; action: string }>;
+    supportingSignals: string[];
+  };
 }
 
 // ---------------------------------------------------------------------------

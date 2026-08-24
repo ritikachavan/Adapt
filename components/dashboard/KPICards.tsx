@@ -5,44 +5,48 @@ interface KPICardsProps {
   aiEscalatedCount?: number;
 }
 
-interface KPI {
-  label: string;
-  value: string | number;
-  sub: string;
-  color: string;
-  bgColor: string;
-  ringColor: string;
-}
-
 export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
   const total = summary.total;
-  const matchRate =
-    total > 0 ? Math.round((summary.matched / total) * 100) : 0;
+  const matchRate = total > 0 ? Math.round((summary.matched / total) * 100) : 0;
+  const exceptions = summary.reviewed + summary.mismatched + summary.missing;
 
-  const kpis: KPI[] = [
+  // Hero cards: Total + Match Rate (larger, more prominent)
+  const heroCards = [
     {
       label: "Total Transactions",
       value: total,
       sub: "in current dataset",
       color: "text-slate-900",
-      bgColor: "bg-slate-50",
-      ringColor: "ring-slate-200",
+      bgColor: "bg-white",
+      borderColor: "border-slate-200",
+    },
+    {
+      label: "Match Rate",
+      value: `${matchRate}%`,
+      sub: `${summary.matched} auto-resolved`,
+      color: matchRate >= 80 ? "text-emerald-700" : matchRate >= 60 ? "text-amber-700" : "text-rose-700",
+      bgColor: matchRate >= 80 ? "bg-emerald-50" : matchRate >= 60 ? "bg-amber-50" : "bg-rose-50",
+      borderColor: matchRate >= 80 ? "border-emerald-200" : matchRate >= 60 ? "border-amber-200" : "border-rose-200",
+    },
+  ];
+
+  // Secondary cards: decision breakdown
+  const secondaryCards = [
+    {
+      label: "Exceptions",
+      value: exceptions,
+      sub: "require attention",
+      color: "text-amber-700",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-200",
     },
     {
       label: "Matched",
       value: summary.matched,
-      sub: `${total > 0 ? Math.round((summary.matched / total) * 100) : 0}% of total`,
+      sub: "auto-resolved",
       color: "text-emerald-700",
       bgColor: "bg-emerald-50",
-      ringColor: "ring-emerald-200",
-    },
-    {
-      label: "Review",
-      value: summary.reviewed,
-      sub: "awaiting decision",
-      color: "text-amber-700",
-      bgColor: "bg-amber-50",
-      ringColor: "ring-amber-200",
+      borderColor: "border-emerald-200",
     },
     {
       label: "Mismatch",
@@ -50,15 +54,15 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
       sub: "amount discrepancy",
       color: "text-rose-700",
       bgColor: "bg-rose-50",
-      ringColor: "ring-rose-200",
+      borderColor: "border-rose-200",
     },
     {
       label: "Missing",
       value: summary.missing,
-      sub: "no settlement found",
+      sub: "no settlement",
       color: "text-orange-700",
       bgColor: "bg-orange-50",
-      ringColor: "ring-orange-200",
+      borderColor: "border-orange-200",
     },
     {
       label: "Refunded",
@@ -66,15 +70,7 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
       sub: "refund lifecycle",
       color: "text-sky-700",
       bgColor: "bg-sky-50",
-      ringColor: "ring-sky-200",
-    },
-    {
-      label: "Match Rate",
-      value: `${matchRate}%`,
-      sub: "auto-resolved",
-      color: "text-indigo-700",
-      bgColor: "bg-indigo-50",
-      ringColor: "ring-indigo-200",
+      borderColor: "border-sky-200",
     },
     {
       label: "AI Escalations",
@@ -82,26 +78,46 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
       sub: "sent to AI judge",
       color: "text-violet-700",
       bgColor: "bg-violet-50",
-      ringColor: "ring-violet-200",
+      borderColor: "border-violet-200",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {kpis.map((kpi) => (
-        <div
-          key={kpi.label}
-          className={`rounded-xl border ${kpi.ringColor} ${kpi.bgColor} p-4 transition hover:shadow-sm`}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            {kpi.label}
-          </p>
-          <p className={`mt-1 text-2xl font-bold tabular-nums ${kpi.color}`}>
-            {kpi.value}
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">{kpi.sub}</p>
-        </div>
-      ))}
+    <div className="space-y-3">
+      {/* Hero row */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {heroCards.map((kpi) => (
+          <div
+            key={kpi.label}
+            className={`rounded-xl border ${kpi.borderColor} ${kpi.bgColor} p-5 transition hover:shadow-sm`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {kpi.label}
+            </p>
+            <p className={`mt-1 text-3xl font-bold tabular-nums ${kpi.color}`}>
+              {kpi.value}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">{kpi.sub}</p>
+          </div>
+        ))}
+      </div>
+      {/* Secondary row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {secondaryCards.map((kpi) => (
+          <div
+            key={kpi.label}
+            className={`rounded-xl border ${kpi.borderColor} ${kpi.bgColor} p-3 transition hover:shadow-sm`}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              {kpi.label}
+            </p>
+            <p className={`mt-1 text-xl font-bold tabular-nums ${kpi.color}`}>
+              {kpi.value}
+            </p>
+            <p className="mt-0.5 text-[10px] text-slate-500">{kpi.sub}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
