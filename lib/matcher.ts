@@ -317,7 +317,7 @@ export function judgePayment(
     if (flags.length > 0) {
       decision = "REVIEW";
       confidence = flags.length > 1 ? 0.45 : lookalike ? 0.55 : 0.5;
-      reason = `Ambiguity detected: ${flags.join("; ")}. Escalated for review.`;
+      reason = `Ambiguity detected: ${flags.join("; ")}. Flagged for review.`;
     }
   }
 
