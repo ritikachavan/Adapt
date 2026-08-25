@@ -136,7 +136,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={loading} aiMode={aiMode} hasData={true} />
+      <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={loading} aiMode={aiMode} hasData={true} aiProvider={data.aiMetrics.aiProvider} aiSuccessCount={data.aiMetrics.aiSuccessCount} />
       <ReconciliationPipeline status={pipelineStatus} data={pipelineData} aiMode={aiMode} onStageClick={handleStageClick} />
       <KPICards summary={data.summary} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} />
       <AuditIntelligence summary={data.summary} aiMetrics={data.aiMetrics} decisions={data.decisions} />
@@ -149,17 +149,7 @@ export default function DashboardPage() {
         <TransactionTable decisions={data.decisions} onRowClick={openDrawer} activeFilter={tableFilter} onFilterApplied={handleFilterApplied} />
       </div>
       <TransactionDrawer decision={drawerData} onClose={() => setDrawerData(null)} />
-      {loading && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm">
-          <div className="rounded-xl bg-white p-6 shadow-xl flex items-center gap-3">
-            <svg className="h-5 w-5 animate-spin text-indigo-600" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <span className="text-sm font-medium text-slate-800">{aiMode ? "Running AI reconciliation\u2026" : "Running reconciliation\u2026"}</span>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

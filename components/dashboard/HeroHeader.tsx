@@ -6,6 +6,8 @@ interface HeroHeaderProps {
   loading: boolean;
   aiMode: boolean;
   hasData: boolean;
+  aiProvider?: string | null;
+  aiSuccessCount?: number;
 }
 
 export default function HeroHeader({
@@ -14,6 +16,8 @@ export default function HeroHeader({
   loading,
   aiMode,
   hasData,
+  aiProvider,
+  aiSuccessCount,
 }: HeroHeaderProps) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -28,12 +32,25 @@ export default function HeroHeader({
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
             Turn reconciliation exceptions into explainable, risk-prioritized investigations.
           </p>
-          {hasData && (
-            <p className="mt-2 text-xs font-medium text-slate-500">
-              {aiMode
-                ? "Last run: AI-assisted reconciliation"
-                : "Last run: deterministic reconciliation"}
-            </p>
+          {hasData && !loading && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                aiMode ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${aiMode ? "bg-violet-500" : "bg-slate-400"}`} />
+                {aiMode ? "AI-assisted" : "Deterministic"}
+              </span>
+              {aiMode && aiProvider && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
+                  {aiProvider}
+                </span>
+              )}
+              {aiMode && aiSuccessCount !== undefined && aiSuccessCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                  {aiSuccessCount} AI decision{aiSuccessCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -60,7 +77,7 @@ export default function HeroHeader({
             type="button"
             onClick={onRunAI}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-300 bg-white px-6 py-3 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-violet-300 bg-white px-6 py-3 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading && aiMode ? (
               <>

@@ -12,6 +12,8 @@ export interface TransactionRow {
   source: string;
   evidence: Array<{ field: string; expected?: string | number | null; actual?: string | number | null; detail?: string }>;
   anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
+  risk?: { score: number; level: string; signals: string[] };
+  resolution?: { priority: string; action: string; title: string; rationale: string; steps: Array<{ order: number; action: string }>; supportingSignals: string[] };
 }
 
 interface Props { decisions: TransactionRow[]; onRowClick: (row: TransactionRow) => void; activeFilter?: string | null; onFilterApplied?: () => void; }
@@ -23,18 +25,22 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
   const [filter, setFilter] = useState("ALL");
   const [srcFilter, setSrcFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [exceptionOnly, setExceptionOnly] = useState(false);
 
   useEffect(() => {
     if (activeFilter) {
       if (activeFilter === "EXCEPTIONS") {
         setFilter("ALL");
         setSrcFilter("ALL");
+        setExceptionOnly(true);
       } else if (activeFilter === "OLLAMA") {
         setFilter("ALL");
         setSrcFilter("OLLAMA");
+        setExceptionOnly(false);
       } else {
         setFilter(activeFilter);
         setSrcFilter("ALL");
+        setExceptionOnly(false);
       }
       setPage(0);
       onFilterApplied?.();
@@ -42,6 +48,7 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
   }, [activeFilter, onFilterApplied]);
 
   const filtered = decisions.filter((d) => {
+    if (exceptionOnly && d.decision === "MATCHED") return false;
     if (filter !== "ALL" && d.decision !== filter) return false;
     if (srcFilter !== "ALL" && d.source !== srcFilter) return false;
     if (search && !d.transactionId.toLowerCase().includes(search.toLowerCase())) return false;
@@ -67,7 +74,7 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
       </div>
       <div className="flex flex-wrap gap-1 border-b border-slate-100 px-5 py-2">
         {["ALL","MATCHED","REVIEW","MISMATCH","MISSING","REFUNDED"].map((f) => (
-          <button key={f} type="button" onClick={() => { setFilter(f); setPage(0); }}
+          <button key={f} type="button" onClick={() => { setFilter(f); setPage(0); setExceptionOnly(false); }}
             className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${filter === f ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{f}</button>
         ))}
       </div>
