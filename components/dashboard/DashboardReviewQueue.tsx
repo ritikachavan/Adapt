@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useState } from "react";
 import DecisionBadge from "../ui/DecisionBadge";
 
 export interface ReviewItem {
@@ -30,6 +31,7 @@ const RISK_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
 };
 
 export default function DashboardReviewQueue({ decisions, onItemClick }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const reviews = decisions
     .filter((d) => d.decision === "REVIEW")
     .sort((a, b) => {
@@ -59,7 +61,7 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {reviews.slice(0, 10).map((r) => {
+          {(expanded ? reviews : reviews.slice(0, 10)).map((r) => {
             const riskStyle = RISK_STYLES[r.risk?.level ?? "LOW"] ?? RISK_STYLES.LOW;
             return (
               <li key={r.transactionId}>
@@ -80,13 +82,13 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
                       <span className="text-xs font-semibold tabular-nums text-slate-600">{Math.round(r.confidence * 100)}%</span>
                       <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
                         r.aiStatus === "AI_SUCCESS" ? "bg-violet-100 text-violet-700" :
-                        r.aiStatus === "AI_FALLBACK" ? "bg-rose-100 text-rose-700" :
+                        r.aiStatus === "AI_FALLBACK" ? "bg-amber-100 text-amber-700" :
                         r.aiStatus === "AI_SKIPPED" ? "bg-slate-100 text-slate-500" :
                         r.aiStatus === "AI_NOT_REQUESTED" ? "bg-slate-100 text-slate-400" :
                         r.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"
                       }`}>{
                         r.aiStatus === "AI_SUCCESS" ? "AI INVESTIGATED" :
-                        r.aiStatus === "AI_FALLBACK" ? "AI FALLBACK" :
+                        r.aiStatus === "AI_FALLBACK" ? "AI INCONCLUSIVE" :
                         r.aiStatus === "AI_SKIPPED" ? "AI SKIPPED" :
                         r.aiStatus === "AI_NOT_REQUESTED" ? "AI NOT REQUESTED" :
                         r.source
@@ -105,7 +107,12 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
             );
           })}
           {reviews.length > 10 && (
-            <li className="px-5 py-2 text-center text-xs text-slate-500">+{reviews.length - 10} more cases</li>
+            <li>
+              <button type="button" onClick={() => setExpanded(!expanded)}
+                className="w-full px-5 py-2.5 text-center text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-700">
+                {expanded ? "Show fewer cases" : `Show all ${reviews.length} cases`}
+              </button>
+            </li>
           )}
         </ul>
       )}

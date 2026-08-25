@@ -80,14 +80,14 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
             <span className={`text-sm font-bold tabular-nums ${c.t}`}>{Math.round(decision.confidence * 100)}% confidence</span>
             <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${
               decision.aiStatus === "AI_SUCCESS" ? "bg-violet-100 text-violet-700" :
-              decision.aiStatus === "AI_FALLBACK" ? "bg-rose-100 text-rose-700" :
+              decision.aiStatus === "AI_FALLBACK" ? "bg-amber-100 text-amber-700" :
               decision.aiStatus === "AI_SKIPPED" ? "bg-slate-100 text-slate-500" :
               decision.aiStatus === "AI_NOT_REQUESTED" ? "bg-slate-100 text-slate-400" :
               decision.source === "OLLAMA" ? "bg-violet-100 text-violet-700" :
               decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
             }`}>{
               decision.aiStatus === "AI_SUCCESS" ? "AI Judge (Ollama) — Investigated" :
-              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Fallback (Human Review Required)" :
+              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Inconclusive (Human Review Required)" :
               decision.aiStatus === "AI_SKIPPED" ? "AI Judge — Not Escalated" :
               decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Judge — Not Requested" :
               SRC[decision.source] ?? decision.source
@@ -98,6 +98,12 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Decision Reason</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-800">{decision.reason}</p>
+            {decision.aiStatus === "AI_FALLBACK" && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-xs font-semibold text-amber-800">Status: INCONCLUSIVE</p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-700">AI could not establish sufficient evidence for an automated verdict. The transaction remains in safe REVIEW for human evaluation.</p>
+              </div>
+            )}
           </section>
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Matched Record</h3>
