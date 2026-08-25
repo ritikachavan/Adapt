@@ -14,7 +14,7 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
     { label: "Records Processed", value: total, accent: "text-slate-900" },
     { label: "Match Rate", value: `${matchRate}%`, accent: matchRate >= 80 ? "text-emerald-700" : matchRate >= 60 ? "text-amber-700" : "text-rose-700" },
     { label: "Exceptions", value: exceptions, accent: "text-amber-700" },
-    { label: "AI Investigated", value: aiEscalatedCount ?? 0, accent: "text-violet-700" },
+    { label: "AI Escalated", value: aiEscalatedCount ?? 0, accent: "text-violet-700" },
     { label: "Matched", value: summary.matched, accent: "text-emerald-700" },
     { label: "Mismatch", value: summary.mismatched, accent: "text-rose-700" },
     { label: "Missing", value: summary.missing, accent: "text-orange-700" },

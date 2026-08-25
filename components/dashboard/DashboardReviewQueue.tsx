@@ -38,7 +38,7 @@ const AI_STYLES: Record<string, { bg: string; text: string }> = {
 
 const AI_LABELS: Record<string, string> = {
   AI_SUCCESS: "AI INVESTIGATED",
-  AI_FALLBACK: "AI INCONCLUSIVE",
+  AI_FALLBACK: "AI FALLBACK",
   AI_SKIPPED: "AI SKIPPED",
   AI_NOT_REQUESTED: "AI NOT REQUESTED",
 };

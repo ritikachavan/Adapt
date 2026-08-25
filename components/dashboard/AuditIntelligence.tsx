@@ -213,7 +213,7 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
         {/* Risk Distribution */}
         <div className="rounded-lg border border-slate-200 p-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Risk Distribution</h3>
-          <p className="mt-1 text-[11px] text-slate-400">ML-assisted investigation priority</p>
+          <p className="mt-1 text-[11px] text-slate-400">Risk measures investigation urgency; anomaly detection identifies unusual patterns independently.</p>
           <div className="mt-3 space-y-2">
             {[{ label: "HIGH", count: riskDist.high, color: "bg-rose-500", text: "text-rose-700" },
               { label: "MEDIUM", count: riskDist.medium, color: "bg-amber-500", text: "text-amber-700" },

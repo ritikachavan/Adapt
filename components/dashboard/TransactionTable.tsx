@@ -137,7 +137,7 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function SourceBadge({ source, aiStatus }: { source: string; aiStatus?: string }) {
   if (aiStatus === "AI_SUCCESS") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700">AI INVESTIGATED</span>;
-  if (aiStatus === "AI_FALLBACK") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700">AI INCONCLUSIVE</span>;
+  if (aiStatus === "AI_FALLBACK") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700">AI FALLBACK</span>;
   if (aiStatus === "AI_SKIPPED") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500">AI SKIPPED</span>;
   if (aiStatus === "AI_NOT_REQUESTED") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-400">AI NOT REQUESTED</span>;
   const s: Record<string, string> = { DETERMINISTIC: "bg-slate-100 text-slate-700", OLLAMA: "bg-violet-100 text-violet-700", HUMAN_REVIEW: "bg-indigo-100 text-indigo-700" };

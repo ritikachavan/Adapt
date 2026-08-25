@@ -161,7 +161,7 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
               decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
             }`}>{
               decision.aiStatus === "AI_SUCCESS" ? "AI Judge (Ollama) — Investigated" :
-              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Inconclusive (Human Review Required)" :
+              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Fallback (Human Review Required)" :
               decision.aiStatus === "AI_SKIPPED" ? "AI Judge — Not Escalated" :
               decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Judge — Not Requested" :
               SRC[decision.source] ?? decision.source
