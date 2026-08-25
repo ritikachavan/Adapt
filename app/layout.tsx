@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { ReconciliationProvider } from "@/lib/reconciliation-context";
 
 export const metadata: Metadata = {
   title: "ADAPT — Financial Reconciliation & Control Intelligence",
@@ -24,22 +25,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-100 text-slate-900 antialiased">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5">
             <Link href="/" className="flex items-baseline gap-2">
-              <span className="text-lg font-bold tracking-tight text-indigo-700">
+              <span className="text-base font-bold tracking-tight text-slate-900">
                 ADAPT
               </span>
-              <span className="hidden text-[11px] font-medium uppercase tracking-wider text-slate-500 sm:inline">
-                Adaptive AI Finance Controller
+              <span className="hidden text-[10px] font-medium uppercase tracking-widest text-slate-400 sm:inline">
+                Finance Controller
               </span>
             </Link>
-            <nav className="ml-auto flex items-center gap-1 text-sm font-medium">
+            <nav className="ml-auto flex items-center gap-0.5 text-[13px] font-medium">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-md px-3 py-1.5 text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700"
+                  className="rounded px-2.5 py-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 >
                   {item.label}
                 </Link>
@@ -47,8 +48,10 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
-        <footer className="mx-auto max-w-6xl px-4 pb-8 pt-2 text-xs text-slate-400">
+        <main className="mx-auto w-full max-w-6xl px-4 py-4">
+          <ReconciliationProvider>{children}</ReconciliationProvider>
+        </main>
+        <footer className="mx-auto max-w-6xl px-4 pb-6 pt-2 text-[11px] text-slate-400">
           ADAPT · deterministic rules first · local AI only for ambiguity ·
           humans stay in control
         </footer>

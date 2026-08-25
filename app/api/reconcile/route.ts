@@ -738,6 +738,13 @@ let cachedResponse:
     body: ReconciliationResponse;
   } | null = null;
 
+/**
+ * Latest reconciliation result (including AI).
+ * Persists across page navigations.
+ * Dashboard and Review pages can retrieve this via GET.
+ */
+let latestResult: ReconciliationResponse | null = null;
+
 export async function POST(
   request: Request
 ): Promise<Response> {
@@ -841,6 +848,11 @@ export async function POST(
       };
     }
 
+    // Always store the latest result (including AI results)
+    latestResult = JSON.parse(
+      JSON.stringify(response)
+    );
+
     return Response.json(
       response
     );
@@ -860,4 +872,15 @@ export async function POST(
       }
     );
   }
+}
+
+/**
+ * GET /api/reconcile — returns the latest reconciliation result.
+ * Used by Dashboard to restore state after navigation.
+ */
+export async function GET(): Promise<Response> {
+  if (latestResult) {
+    return Response.json(latestResult);
+  }
+  return Response.json({ error: "No reconciliation result available. Run reconciliation first." }, { status: 404 });
 }
