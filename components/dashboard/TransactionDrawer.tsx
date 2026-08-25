@@ -1,7 +1,54 @@
 ﻿"use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import DecisionBadge from "../ui/DecisionBadge";
+
+interface InvestigationStep {
+  label: string;
+  status: "complete" | "warning" | "info";
+  detail: string;
+}
+
+interface CandidateRecord {
+  id: string;
+  amount: number;
+  fee: number;
+  settlementDate: string;
+  paymentId: string;
+  amountMatch: boolean;
+  referenceMatch: boolean;
+}
+
+interface InvestigationResult {
+  transactionId: string;
+  steps: InvestigationStep[];
+  settlementCandidates: CandidateRecord[];
+  evidence: {
+    expectedAmount: number | null;
+    candidateAmounts: number[];
+    paymentReference: string | null;
+    settlementReferences: string[];
+    amountMatch: boolean | null;
+    referenceMatch: boolean | null;
+    settlementDateAvailable: boolean;
+  };
+  recommendation: "MATCH_CANDIDATE" | "REVIEW";
+  confidence: number;
+  reason: string;
+  humanReviewRequired: boolean;
+  controlPlan: {
+    finding: string;
+    evidence: string;
+    uncertainty: string;
+    missingEvidence: string[];
+    recommendedAction: string;
+    actionType: string;
+    authority: string;
+  };
+  whyUnresolved: string | null;
+  whatWouldResolve: string[];
+  remainingRiskSignals: string[];
+}
 
 export interface EvidenceItem {
   field: string;
@@ -45,6 +92,33 @@ const CLR: Record<string, { b: string; bg: string; t: string }> = {
 
 export default function TransactionDrawer({ decision, onClose }: Props) {
   const btnRef = useRef<HTMLButtonElement>(null);
+  const [investigation, setInvestigation] = useState<InvestigationResult | null>(null);
+  const [investigating, setInvestigating] = useState(false);
+  const [investigateError, setInvestigateError] = useState<string | null>(null);
+
+  const runInvestigation = useCallback(async () => {
+    if (!decision) return;
+    setInvestigating(true);
+    setInvestigateError(null);
+    setInvestigation(null);
+    try {
+      const res = await fetch("/api/investigate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: decision.transactionId }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        setInvestigateError(err.error || "Investigation failed");
+        return;
+      }
+      setInvestigation((await res.json()) as InvestigationResult);
+    } catch {
+      setInvestigateError("Could not reach the investigation API.");
+    } finally {
+      setInvestigating(false);
+    }
+  }, [decision]);
 
   useEffect(() => {
     if (!decision) return;
@@ -121,6 +195,13 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
           {decision.anomaly && <AnomalySignals anomaly={decision.anomaly} />}
           {decision.resolution && <ResolutionIntelligence resolution={decision.resolution} />}
           <ExplainDecision decision={decision} c={c} />
+          <InvestigationSection
+            decision={decision}
+            investigation={investigation}
+            investigating={investigating}
+            investigateError={investigateError}
+            onRun={runInvestigation}
+          />
         </div>
       </aside>
     </>
@@ -333,7 +414,154 @@ function ResolutionIntelligence({ resolution }: { resolution: { priority: string
   );
 }
 
+function InvestigationSection({ decision, investigation, investigating, investigateError, onRun }: {
+  decision: DrawerDecision;
+  investigation: InvestigationResult | null;
+  investigating: boolean;
+  investigateError: string | null;
+  onRun: () => void;
+}) {
+  const stepIcon = (status: string) => {
+    if (status === "complete") return <svg className="h-3.5 w-3.5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>;
+    if (status === "warning") return <svg className="h-3.5 w-3.5 text-amber-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
+    return <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" /></svg>;
+  };
 
+  return (
+    <section className="rounded-lg border border-indigo-200 bg-indigo-50/30 p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Investigation Agent</h3>
+        {!investigation && !investigating && (
+          <button type="button" onClick={onRun} className="rounded-md bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-indigo-700">Run Investigation</button>
+        )}
+      </div>
+      {investigating && <div className="mt-3 flex items-center gap-2 text-xs text-indigo-600"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Investigating…</div>}
+      {investigateError && <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{investigateError}</div>}
+      {investigation && <InvestigationResults investigation={investigation} stepIcon={stepIcon} />}
+    </section>
+  );
+}
 
+function InvestigationResults({ investigation, stepIcon }: { investigation: InvestigationResult; stepIcon: (s: string) => React.ReactNode }) {
+  return (
+    <div className="mt-3 space-y-4">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Investigation Progress</p>
+        <ol className="mt-2 space-y-2">
+          {investigation.steps.map((step, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="mt-0.5 flex-shrink-0">{stepIcon(step.status)}</span>
+              <div><p className="text-[11px] font-semibold text-slate-800">{step.label}</p><p className="text-[11px] text-slate-500">{step.detail}</p></div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Evidence</p>
+        <div className="mt-2 space-y-1.5 text-[11px]">
+          <div className="flex justify-between"><span className="text-slate-500">Expected amount</span><span className="font-mono font-semibold text-slate-800">{investigation.evidence.expectedAmount !== null ? `₹${investigation.evidence.expectedAmount}` : "NOT AVAILABLE"}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Candidate amounts</span><span className="font-mono font-semibold text-slate-800">{investigation.evidence.candidateAmounts.length > 0 ? investigation.evidence.candidateAmounts.map((a) => `₹${a}`).join(", ") : "NONE"}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Amount match</span><span className={`font-mono font-semibold ${investigation.evidence.amountMatch === true ? "text-emerald-700" : investigation.evidence.amountMatch === false ? "text-rose-700" : "text-slate-400"}`}>{investigation.evidence.amountMatch === true ? "YES" : investigation.evidence.amountMatch === false ? "NO" : "N/A"}</span></div>
+          <div className="flex justify-between"><span className="text-slate-500">Payment reference</span><span className="font-mono font-semibold text-slate-800">{investigation.evidence.paymentReference ?? "NOT AVAILABLE"}</span></div>
+        </div>
+      </div>
+      {investigation.settlementCandidates.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Settlement Candidates ({investigation.settlementCandidates.length})</p>
+          <div className="mt-2 space-y-2">
+            {investigation.settlementCandidates.map((c) => (
+              <div key={c.id} className="rounded-md border border-slate-200 bg-white p-2.5">
+                <p className="font-mono text-[11px] font-semibold text-slate-800">{c.id}</p>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
+                  <span className="text-slate-500">Amount: <span className="font-mono font-semibold text-slate-700">₹{c.amount}</span></span>
+                  <span className={c.amountMatch ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{c.amountMatch ? "Amount ✓" : "Amount ✗"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className={`rounded-lg border p-3 ${investigation.recommendation === "MATCH_CANDIDATE" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Agent Recommendation</p>
+        <p className={`mt-1 text-sm font-bold ${investigation.recommendation === "MATCH_CANDIDATE" ? "text-emerald-700" : "text-amber-700"}`}>{investigation.recommendation === "MATCH_CANDIDATE" ? "MATCH CANDIDATE" : "REVIEW"}</p>
+        <p className="mt-0.5 text-xs text-slate-600">{Math.round(investigation.confidence * 100)}% confidence</p>
+        <p className="mt-1 text-xs text-slate-700">{investigation.reason}</p>
+        {investigation.humanReviewRequired && <div className="mt-2 rounded-md bg-white/60 p-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Decision Required</p></div>}
+      </div>
 
+      {/* Why unresolved? */}
+      {investigation.whyUnresolved && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Why can&apos;t Adapt resolve this?</p>
+          <p className="mt-1 text-[11px] text-amber-800">{investigation.whyUnresolved}</p>
+        </div>
+      )}
+
+      {/* What would resolve this? */}
+      {investigation.whatWouldResolve.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">What would resolve this?</p>
+          <ul className="mt-1.5 space-y-1">
+            {investigation.whatWouldResolve.map((item, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-700">
+                <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Remaining Risk Signals */}
+      {investigation.remainingRiskSignals.length > 0 && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-700">Remaining Risk</p>
+          <ul className="mt-1.5 space-y-1">
+            {investigation.remainingRiskSignals.map((sig, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-[11px] text-rose-800">
+                <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-rose-400" />
+                {sig}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Control Plan */}
+      <div className="rounded-lg border border-slate-300 bg-slate-50 p-3 space-y-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">Control Plan</p>
+        <div>
+          <p className="text-[10px] font-semibold text-slate-500">Finding</p>
+          <p className="text-[11px] text-slate-800">{investigation.controlPlan.finding}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold text-slate-500">Evidence</p>
+          <p className="text-[11px] text-slate-800">{investigation.controlPlan.evidence}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold text-slate-500">Uncertainty</p>
+          <p className="text-[11px] text-slate-800">{investigation.controlPlan.uncertainty}</p>
+        </div>
+        {investigation.controlPlan.missingEvidence.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500">Missing Evidence</p>
+            <ul className="mt-1 space-y-0.5">
+              {investigation.controlPlan.missingEvidence.map((m, i) => (
+                <li key={i} className="text-[11px] text-rose-700">• {m}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div>
+          <p className="text-[10px] font-semibold text-slate-500">Recommended Action</p>
+          <p className="text-[11px] font-semibold text-slate-800">{investigation.controlPlan.recommendedAction}</p>
+        </div>
+        <div className="rounded-md bg-white/80 p-2 border border-slate-200">
+          <p className="text-[10px] font-semibold text-slate-500">Authority</p>
+          <p className="text-[11px] text-slate-700">{investigation.controlPlan.authority}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
