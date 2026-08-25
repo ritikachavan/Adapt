@@ -17,6 +17,7 @@ export interface DrawerDecision {
   reason: string;
   matchedRecordId: string | null;
   source: string;
+  aiStatus?: "AI_SUCCESS" | "AI_FALLBACK" | "AI_SKIPPED" | "AI_NOT_REQUESTED";
   evidence: EvidenceItem[];
   risk?: { score: number; level: string; signals: string[] };
   anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string; explanation: string; evidence: string[] }> };
@@ -78,8 +79,19 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
             <DecisionBadge decision={decision.decision} />
             <span className={`text-sm font-bold tabular-nums ${c.t}`}>{Math.round(decision.confidence * 100)}% confidence</span>
             <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-              decision.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
-            }`}>{SRC[decision.source] ?? decision.source}</span>
+              decision.aiStatus === "AI_SUCCESS" ? "bg-violet-100 text-violet-700" :
+              decision.aiStatus === "AI_FALLBACK" ? "bg-rose-100 text-rose-700" :
+              decision.aiStatus === "AI_SKIPPED" ? "bg-slate-100 text-slate-500" :
+              decision.aiStatus === "AI_NOT_REQUESTED" ? "bg-slate-100 text-slate-400" :
+              decision.source === "OLLAMA" ? "bg-violet-100 text-violet-700" :
+              decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
+            }`}>{
+              decision.aiStatus === "AI_SUCCESS" ? "AI Judge (Ollama) — Investigated" :
+              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Fallback (Human Review Required)" :
+              decision.aiStatus === "AI_SKIPPED" ? "AI Judge — Not Escalated" :
+              decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Judge — Not Requested" :
+              SRC[decision.source] ?? decision.source
+            }</span>
           </div>
         </div>
         <div className="space-y-6 px-6 py-5">

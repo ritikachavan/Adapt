@@ -30,7 +30,7 @@ const VALID_DECISIONS: readonly ReconciliationDecision[] = [
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:11434";
 const DEFAULT_MODEL = "qwen2.5:1.5b";
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 45_000;
 const NUM_PREDICT = 200;
 
 export interface OllamaRequestInit {

@@ -14,7 +14,8 @@ import ReconciliationPipeline from "@/components/dashboard/ReconciliationPipelin
 import type { PipelineStatus, PipelineData } from "@/components/dashboard/ReconciliationPipeline";
 import TransactionDrawer from "@/components/dashboard/TransactionDrawer";
 import type { DrawerDecision } from "@/components/dashboard/TransactionDrawer";
-import type { ReconciliationSummary } from "@/components/dashboard/ReconciliationOverview";
+import AskAdapt from "@/components/dashboard/AskAdapt";
+import type { ReconciliationSummary} from "@/components/dashboard/ReconciliationOverview";
 
 interface AiMetrics {
   deterministicReviewCount: number;
@@ -136,6 +137,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end mb-2"><AskAdapt /></div>
       <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={loading} aiMode={aiMode} hasData={true} aiProvider={data.aiMetrics.aiProvider} aiSuccessCount={data.aiMetrics.aiSuccessCount} />
       <ReconciliationPipeline status={pipelineStatus} data={pipelineData} aiMode={aiMode} onStageClick={handleStageClick} />
       <KPICards summary={data.summary} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} />

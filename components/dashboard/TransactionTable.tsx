@@ -10,6 +10,7 @@ export interface TransactionRow {
   reason: string;
   matchedRecordId: string | null;
   source: string;
+  aiStatus?: "AI_SUCCESS" | "AI_FALLBACK" | "AI_SKIPPED" | "AI_NOT_REQUESTED";
   evidence: Array<{ field: string; expected?: string | number | null; actual?: string | number | null; detail?: string }>;
   anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
   risk?: { score: number; level: string; signals: string[] };
@@ -50,7 +51,12 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
   const filtered = decisions.filter((d) => {
     if (exceptionOnly && d.decision === "MATCHED") return false;
     if (filter !== "ALL" && d.decision !== filter) return false;
-    if (srcFilter !== "ALL" && d.source !== srcFilter) return false;
+    if (srcFilter !== "ALL") {
+      if (srcFilter === "AI_INVESTIGATED" && d.aiStatus !== "AI_SUCCESS") return false;
+      if (srcFilter === "AI_SKIPPED" && d.aiStatus !== "AI_SKIPPED") return false;
+      if (srcFilter === "DETERMINISTIC" && d.source !== "DETERMINISTIC") return false;
+      if (srcFilter === "OLLAMA" && d.source !== "OLLAMA") return false;
+    }
     if (search && !d.transactionId.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -68,7 +74,9 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
             className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-indigo-400 focus:outline-none">
             <option value="ALL">All Sources</option>
             <option value="DETERMINISTIC">Deterministic</option>
-            <option value="OLLAMA">AI</option>
+            <option value="OLLAMA">AI (Ollama)</option>
+            <option value="AI_INVESTIGATED">AI Investigated</option>
+            <option value="AI_SKIPPED">AI Skipped</option>
           </select>
         </div>
       </div>
@@ -95,7 +103,7 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
                 <td className="px-4 py-2.5"><DecisionBadge decision={d.decision} /></td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-right"><ConfidenceBar value={d.confidence} /></td>
                 <td className="whitespace-nowrap px-4 py-2.5">{d.matchedRecordId ? <span className="font-mono text-xs text-slate-700">{d.matchedRecordId}</span> : <span className="text-xs text-slate-400">\u2014</span>}</td>
-                <td className="px-4 py-2.5"><SourceBadge source={d.source} /></td>
+                <td className="px-4 py-2.5"><SourceBadge source={d.source} aiStatus={d.aiStatus} /></td>
                 <td className="max-w-[200px] px-4 py-2.5"><p className="truncate text-xs text-slate-600" title={d.reason}>{d.reason}</p></td>
               </tr>
             ))}
@@ -127,7 +135,11 @@ function ConfidenceBar({ value }: { value: number }) {
   );
 }
 
-function SourceBadge({ source }: { source: string }) {
+function SourceBadge({ source, aiStatus }: { source: string; aiStatus?: string }) {
+  if (aiStatus === "AI_SUCCESS") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700">AI INVESTIGATED</span>;
+  if (aiStatus === "AI_FALLBACK") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-700">AI FALLBACK</span>;
+  if (aiStatus === "AI_SKIPPED") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500">AI SKIPPED</span>;
+  if (aiStatus === "AI_NOT_REQUESTED") return <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-400">AI NOT REQUESTED</span>;
   const s: Record<string, string> = { DETERMINISTIC: "bg-slate-100 text-slate-700", OLLAMA: "bg-violet-100 text-violet-700", HUMAN_REVIEW: "bg-indigo-100 text-indigo-700" };
   return <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${s[source] ?? "bg-slate-100 text-slate-600"}`}>{source}</span>;
 }

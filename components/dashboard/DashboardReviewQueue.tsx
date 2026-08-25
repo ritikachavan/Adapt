@@ -8,6 +8,7 @@ export interface ReviewItem {
   confidence: number;
   reason: string;
   source: string;
+  aiStatus?: "AI_SUCCESS" | "AI_FALLBACK" | "AI_SKIPPED" | "AI_NOT_REQUESTED";
   evidence: Array<{ field: string }>;
   risk?: { score: number; level: string; signals: string[] };
   anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string }> };
@@ -77,7 +78,19 @@ export default function DashboardReviewQueue({ decisions, onItemClick }: Props) 
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-semibold tabular-nums text-slate-600">{Math.round(r.confidence * 100)}%</span>
-                      <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${r.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{r.source}</span>
+                      <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                        r.aiStatus === "AI_SUCCESS" ? "bg-violet-100 text-violet-700" :
+                        r.aiStatus === "AI_FALLBACK" ? "bg-rose-100 text-rose-700" :
+                        r.aiStatus === "AI_SKIPPED" ? "bg-slate-100 text-slate-500" :
+                        r.aiStatus === "AI_NOT_REQUESTED" ? "bg-slate-100 text-slate-400" :
+                        r.source === "OLLAMA" ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"
+                      }`}>{
+                        r.aiStatus === "AI_SUCCESS" ? "AI INVESTIGATED" :
+                        r.aiStatus === "AI_FALLBACK" ? "AI FALLBACK" :
+                        r.aiStatus === "AI_SKIPPED" ? "AI SKIPPED" :
+                        r.aiStatus === "AI_NOT_REQUESTED" ? "AI NOT REQUESTED" :
+                        r.source
+                      }</span>
                     </div>
                   </div>
                   {r.risk && r.risk.signals.length > 0 && (

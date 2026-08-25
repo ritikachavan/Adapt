@@ -471,7 +471,7 @@ async function escalateReviews(
             index
           )
         ) {
-          return decision;
+          return { ...decision, aiStatus: "AI_SKIPPED" as const };
         }
 
         const context =
@@ -486,7 +486,7 @@ async function escalateReviews(
          */
         if (!context) {
           aiFallbackCount += 1;
-          return decision;
+          return { ...decision, aiStatus: "AI_FALLBACK" as const };
         }
 
         let result: DecisionResult;
@@ -498,9 +498,12 @@ async function escalateReviews(
             );
         } catch {
           aiFallbackCount += 1;
-          return createSafeFallback(
-            decision.transactionId
-          );
+          return {
+            ...createSafeFallback(
+              decision.transactionId
+            ),
+            aiStatus: "AI_FALLBACK" as const,
+          };
         }
 
         if (
@@ -508,11 +511,11 @@ async function escalateReviews(
           SAFE_FALLBACK_REASON
         ) {
           aiFallbackCount += 1;
+          return { ...result, aiStatus: "AI_FALLBACK" as const };
         } else {
           aiSuccessCount += 1;
+          return { ...result, aiStatus: "AI_SUCCESS" as const };
         }
-
-        return result;
       }
     );
 
@@ -561,7 +564,8 @@ export async function runReconciliation(
     ).length;
 
   /**
-   * AI is explicitly opt-in.
+   * AI is explicitly opt-in for escalation,
+   * but we always check availability for the status indicator.
    */
   const wantsAi =
     options.ai === true ||
@@ -574,6 +578,23 @@ export async function runReconciliation(
           createOllamaJudgeProvider()
         )
       : null;
+
+  /**
+   * Determine if the AI provider is available
+   * regardless of whether this run uses it.
+   * This powers the dashboard status indicator.
+   */
+  let aiAvailable = false;
+  let aiProviderName: string | null = null;
+  try {
+    const probe =
+      options.provider ??
+      createOllamaJudgeProvider();
+    aiAvailable = true;
+    aiProviderName = probe.name;
+  } catch {
+    aiAvailable = false;
+  }
 
   const maxEscalations =
     normalizeMaxEscalations(
@@ -612,6 +633,13 @@ export async function runReconciliation(
 
     aiSkippedCount =
       outcome.aiSkippedCount;
+  } else {
+    // AI not requested: tag all REVIEW decisions
+    decisions = decisions.map((d) =>
+      d.decision === "REVIEW"
+        ? { ...d, aiStatus: "AI_NOT_REQUESTED" as const }
+        : d
+    );
   }
 
   function count(
@@ -687,10 +715,10 @@ export async function runReconciliation(
       aiSkippedCount,
 
       aiEnabled:
-        provider !== null,
+        aiAvailable,
 
       aiProvider:
-        provider?.name ??
+        aiProviderName ??
         null,
     },
   };

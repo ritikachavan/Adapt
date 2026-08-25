@@ -88,6 +88,19 @@ export interface DecisionResult {
   /** Counterpart record(s) examined, when any exist ("stl_a+stl_b" for splits). */
   matchedRecordId: string | null;
   source: DecisionSource;
+  /**
+   * Per-transaction AI investigation status.
+   *
+   * AI_SUCCESS   — sent to Ollama and received a valid verdict.
+   * AI_FALLBACK  — sent to AI but output failed; safe REVIEW fallback used.
+   * AI_SKIPPED   — intentionally not escalated by the escalation policy.
+   * AI_NOT_REQUESTED — reconciliation run had AI disabled.
+   */
+  aiStatus?:
+    | "AI_SUCCESS"
+    | "AI_FALLBACK"
+    | "AI_SKIPPED"
+    | "AI_NOT_REQUESTED";
   /** ML-assisted risk prioritization. Only present for non-MATCHED decisions. */
   risk?: {
     score: number;
