@@ -10,6 +10,7 @@ import DashboardReviewQueue from "@/components/dashboard/DashboardReviewQueue";
 import type { ReviewItem } from "@/components/dashboard/DashboardReviewQueue";
 import AIPanel from "@/components/dashboard/AIPanel";
 import AuditIntelligence from "@/components/dashboard/AuditIntelligence";
+import ReconciliationOutcomeChart from "@/components/dashboard/ReconciliationOutcomeChart";
 import ReconciliationPipeline from "@/components/dashboard/ReconciliationPipeline";
 import type { PipelineStatus, PipelineData } from "@/components/dashboard/ReconciliationPipeline";
 import TransactionDrawer from "@/components/dashboard/TransactionDrawer";
@@ -117,6 +118,7 @@ export default function DashboardPage() {
       <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={status === "LOADING"} aiMode={aiMode} hasData={true} aiProvider={data.aiMetrics.aiProvider} aiSuccessCount={data.aiMetrics.aiSuccessCount} />
       <ReconciliationPipeline status={pipelineStatus} data={pipelineData} aiMode={aiMode} onStageClick={handleStageClick} />
       <KPICards summary={data.summary} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} />
+      <ReconciliationOutcomeChart summary={data.summary} />
       <AuditIntelligence summary={data.summary} aiMetrics={data.aiMetrics} decisions={data.decisions} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2"><HealthScore summary={data.summary} /></div>
