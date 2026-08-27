@@ -39,3 +39,5 @@ prisma/dev.db
 prisma/dev.db-journal
 *.sqlite
 .aider*
+
+.kilo/
