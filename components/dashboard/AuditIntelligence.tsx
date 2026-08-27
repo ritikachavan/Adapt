@@ -213,7 +213,7 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
               ))}
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-              Calculated from settlement.total evidence: MISMATCH uses |expected \u2212 actual|, MISSING/REVIEW REQUIRED use expected amount. REFUNDED excluded.
+              Calculated from settlement.total evidence: MISMATCH uses |expected − actual|, MISSING/REVIEW REQUIRED use expected amount. REFUNDED excluded.
             </p>
           </div>
 

@@ -171,7 +171,7 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
         <p className="text-[9px] text-slate-500">{aiMetrics.aiProvider ?? "Ollama"} · Produces an initial evidence-based recommendation.</p>
         <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
           <div><p className="text-xs font-bold tabular-nums text-indigo-700">{fmt(aiMetrics.ollamaInvocations ?? aiMetrics.aiEscalatedCount)}</p><p className="text-[8px] text-slate-500">Investigations</p></div>
-          <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.ollamaSuccesses ?? aiMetrics.aiSuccessCount)}</p><p className="text-[8px] text-slate-500">Successful</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.ollamaSuccesses ?? aiMetrics.aiSuccessCount)}</p><p className="text-[8px] text-slate-500">Valid Responses</p></div>
           <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmtMs(aiMetrics.avgOllamaLatencyMs)}</p><p className="text-[8px] text-slate-500">Avg latency</p></div>
         </div>
       </div>
@@ -184,7 +184,7 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
             <p className="text-[9px] text-slate-500">{aiMetrics.grokProvider} · Independently reviews the same evidence and challenges the first perspective.</p>
             <div className="mt-1.5 grid grid-cols-4 gap-2 text-center">
               <div><p className="text-xs font-bold tabular-nums text-indigo-700">{fmt(aiMetrics.grokInvocations)}</p><p className="text-[8px] text-slate-500">Investigations</p></div>
-              <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.grokSuccesses)}</p><p className="text-[8px] text-slate-500">Successful</p></div>
+              <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.grokSuccesses)}</p><p className="text-[8px] text-slate-500">Valid Responses</p></div>
               <div><p className="text-xs font-bold tabular-nums text-rose-700">{fmt(aiMetrics.grokFailures)}</p><p className="text-[8px] text-slate-500">Failures</p></div>
               <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmtMs(aiMetrics.avgGrokLatencyMs)}</p><p className="text-[8px] text-slate-500">Avg latency</p></div>
             </div>
@@ -225,7 +225,12 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
       <div className="mt-2 rounded bg-emerald-50 px-2.5 py-2">
         <p className="text-[10px] font-semibold text-emerald-800">Human Decision</p>
         <p className="text-[9px] text-emerald-700">AI cannot finalize financial actions. A human reviewer remains responsible for unresolved cases.</p>
-        <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount)} cases retained for human review</p>
+        <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount)} Remain Pending Human Review</p>
+        {isDualAgent && aiMetrics.aiEscalatedCount > 0 && (
+          <p className="mt-1 text-[10px] text-slate-500">
+            {fmt(aiMetrics.aiEscalatedCount)} AI Investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} Agreements · {fmt(aiMetrics.aiFallbackCount)} Fallback
+          </p>
+        )}
       </div>
     </div>
   );

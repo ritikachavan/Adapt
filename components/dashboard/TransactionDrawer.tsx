@@ -89,7 +89,7 @@ interface Props {
 
 const SRC: Record<string, string> = {
   DETERMINISTIC: "Deterministic Engine",
-  OLLAMA: "AI Judge (Ollama)",
+  OLLAMA: "Dual-Agent AI Verification",
   GROQ: "AI Judge (Groq)",
   FALLBACK: "AI Fallback",
   HUMAN_REVIEW: "Human Review",
@@ -332,6 +332,9 @@ function ExplainDecision({ decision, c }: { decision: DrawerDecision; c: { b: st
         <p className={c.t}><span className="font-semibold">Verdict:</span> {decision.decision}</p>
         <p className={c.t}><span className="font-semibold">Confidence:</span> {Math.round(decision.confidence * 100)}%</p>
         <p className={c.t}><span className="font-semibold">Source:</span> {SRC[decision.source] ?? decision.source}</p>
+        {decision.dualAgent?.mode === "DUAL_AGENT" && (
+          <p className={c.t}><span className="font-semibold">Providers:</span> Resolution: Ollama · Challenge: Groq · Evidence: {decision.dualAgent.evidenceValidationPassed ? "Validated" : "Reviewing"}</p>
+        )}
         <p className={c.t}><span className="font-semibold">Evidence items:</span> {decision.evidence.length}</p>
         {(decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") && decision.decision === "REVIEW" && (
           <p className="mt-2 text-xs text-amber-700">⚠ AI could not reach a confident verdict. This case remains in safe REVIEW for human evaluation.</p>
