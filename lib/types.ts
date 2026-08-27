@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ADAPT — shared domain types for the deterministic reconciliation engine.
  * Record shapes mirror prisma/schema.prisma and the data/*.json fixtures.
  */
@@ -132,6 +132,7 @@ export interface DecisionResult {
   /** Dual-agent verification metadata. Only present when dual-agent mode was active. */
   dualAgent?: {
     mode: "SINGLE_AGENT" | "DUAL_AGENT";
+    deterministicDecision: ReconciliationDecision;
     ollamaDecision: string | null;
     ollamaConfidence: number | null;
     groqDecision: string | null;

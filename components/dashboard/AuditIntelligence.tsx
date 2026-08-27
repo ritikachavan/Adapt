@@ -65,14 +65,18 @@ function generateSignals(summary: ReconciliationSummary, ai: AiMetrics): string[
   const signals: string[] = [];
   const total = summary.total;
   if (total === 0) return signals;
-  const matchRate = summary.matched / total;
-  const reviewRate = summary.reviewed / total;
-  const mismatchRate = summary.mismatched / total;
+  const matched = summary.byDecision?.MATCHED ?? 0;
+  const reviewed = summary.byDecision?.REVIEW ?? 0;
+  const mismatched = summary.byDecision?.MISMATCH ?? 0;
+  const missing = summary.byDecision?.MISSING ?? 0;
+  const matchRate = matched / total;
+  const reviewRate = reviewed / total;
+  const mismatchRate = mismatched / total;
   if (matchRate >= 0.8) signals.push("Strong match rate \u2014 most transactions reconcile automatically.");
   if (matchRate < 0.5) signals.push("Low match rate \u2014 significant manual review may be required.");
   if (reviewRate > 0.2) signals.push("High review rate \u2014 many cases need human attention.");
   if (mismatchRate > 0.05) signals.push("Elevated mismatch rate \u2014 investigate settlement discrepancies.");
-  if (summary.missing > 3) signals.push(`${summary.missing} missing settlements \u2014 potential settlement pipeline issue.`);
+  if (missing > 3) signals.push(`${missing} missing settlements \u2014 potential settlement pipeline issue.`);
   if (ai.aiFallbackCount > 0) signals.push(`${ai.aiFallbackCount} AI fallback(s) occurred \u2014 AI could not reach a verdict.`);
   if (ai.aiEnabled && ai.aiEscalatedCount > 0) {
     const isDual = ai.dualAgentEnabled && ai.grokProvider !== null;
@@ -97,12 +101,16 @@ function generateSignals(summary: ReconciliationSummary, ai: AiMetrics): string[
 function buildSummary(s: ReconciliationSummary, ai: AiMetrics): string[] {
   const total = s.total;
   if (total === 0) return ["No transactions to analyze."];
-  const matchPct = Math.round((s.matched / total) * 100);
-  const reviewPct = Math.round((s.reviewed / total) * 100);
+  const matched = s.byDecision?.MATCHED ?? 0;
+  const reviewed = s.byDecision?.REVIEW ?? 0;
+  const mismatched = s.byDecision?.MISMATCH ?? 0;
+  const missing = s.byDecision?.MISSING ?? 0;
+  const matchPct = Math.round((matched / total) * 100);
+  const reviewPct = Math.round((reviewed / total) * 100);
   const lines: string[] = [];
-  lines.push(`Reconciled ${total} transactions: ${matchPct}% deterministically auto-reconciled, ${total - s.matched} classified into differentiated outcomes.`);
-  if (s.reviewed > 0) lines.push(`${s.reviewed} cases (${reviewPct}%) require human review due to ambiguity.`);
-  if (s.mismatched > 0) lines.push(`${s.mismatched} amount mismatches and ${s.missing} missing settlements detected.`);
+  lines.push(`Reconciled ${total} transactions: ${matchPct}% deterministically auto-reconciled, ${total - matched} classified into differentiated outcomes.`);
+  if (reviewed > 0) lines.push(`${reviewed} cases (${reviewPct}%) require human review due to ambiguity.`);
+  if (mismatched > 0) lines.push(`${mismatched} amount mismatches and ${missing} missing settlements detected.`);
   if (ai.aiEnabled && ai.aiEscalatedCount > 0) {
     const isDual = ai.dualAgentEnabled && ai.grokProvider !== null;
     const agreements = ai.dualAgentAgreements ?? 0;
@@ -113,8 +121,8 @@ function buildSummary(s: ReconciliationSummary, ai: AiMetrics): string[] {
     } else {
       lines.push(`AI evaluated ${ai.aiEscalatedCount} case(s) using the available AI provider.`);
     }
-  } else if (s.reviewed > 0) {
-    lines.push(`All ${s.reviewed} review-required cases are pending \u2014 AI judge was not invoked.`);
+  } else if (reviewed > 0) {
+    lines.push(`All ${reviewed} review-required cases are pending \u2014 AI judge was not invoked.`);
   }
   return lines;
 }
@@ -129,6 +137,10 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
     ? Math.round((aiMetrics.aiFallbackCount / aiMetrics.aiEscalatedCount) * 100)
     : 0;
 
+  const reviewed = summary.byDecision?.REVIEW ?? 0;
+  const mismatched = summary.byDecision?.MISMATCH ?? 0;
+  const missing = summary.byDecision?.MISSING ?? 0;
+  const refunded = summary.byDecision?.REFUNDED ?? 0;
 
   // Risk distribution from actual risk scores
   const riskDist = { high: 0, medium: 0, low: 0 };
@@ -176,10 +188,10 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
   const topAction = Object.entries(actionCounts).sort((a, b) => b[1] - a[1])[0];
 
   const exceptions = [
-    { label: "Review Required", count: summary.reviewed, pct: pct(summary.reviewed), color: "bg-amber-500", text: "text-amber-700" },
-    { label: "Mismatch", count: summary.mismatched, pct: pct(summary.mismatched), color: "bg-rose-500", text: "text-rose-700" },
-    { label: "Missing", count: summary.missing, pct: pct(summary.missing), color: "bg-orange-400", text: "text-orange-700" },
-    { label: "Refunded", count: summary.refunded, pct: pct(summary.refunded), color: "bg-sky-500", text: "text-sky-700" },
+    { label: "Review Required", count: reviewed, pct: pct(reviewed), color: "bg-amber-500", text: "text-amber-700" },
+    { label: "Mismatch", count: mismatched, pct: pct(mismatched), color: "bg-rose-500", text: "text-rose-700" },
+    { label: "Missing", count: missing, pct: pct(missing), color: "bg-orange-400", text: "text-orange-700" },
+    { label: "Refunded", count: refunded, pct: pct(refunded), color: "bg-sky-500", text: "text-sky-700" },
   ];
 
   return (
@@ -358,16 +370,3 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
     </section>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

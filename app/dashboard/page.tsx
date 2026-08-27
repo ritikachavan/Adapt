@@ -83,7 +83,7 @@ export default function DashboardPage() {
   const handleStageClick = useCallback((filter: string) => { setTableFilter(filter); document.getElementById("transaction-table")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, []);
   const handleFilterApplied = useCallback(() => { setTableFilter(null); }, []);
 
-  const pipelineData: PipelineData | null = data ? { total: data.summary.total, matched: data.summary.matched, reviewed: data.summary.reviewed, mismatched: data.summary.mismatched, missing: data.summary.missing, refunded: data.summary.refunded, aiEscalatedCount: data.aiMetrics.aiEscalatedCount, aiSuccessCount: data.aiMetrics.aiSuccessCount, aiFallbackCount: data.aiMetrics.aiFallbackCount, aiEnabled: data.aiMetrics.aiEnabled, anomalyCount: data.decisions.filter((d) => d.anomaly?.isAnomalous).length } : null;
+  const pipelineData: PipelineData | null = data ? { total: data.summary.total, matched: data.summary.byDecision?.MATCHED ?? 0, reviewed: data.summary.byDecision?.REVIEW ?? 0, mismatched: data.summary.byDecision?.MISMATCH ?? 0, missing: data.summary.byDecision?.MISSING ?? 0, refunded: data.summary.byDecision?.REFUNDED ?? 0, aiEscalatedCount: data.aiMetrics.aiEscalatedCount, aiSuccessCount: data.aiMetrics.aiSuccessCount, aiFallbackCount: data.aiMetrics.aiFallbackCount, aiEnabled: data.aiMetrics.aiEnabled, anomalyCount: data.decisions.filter((d) => d.anomaly?.isAnomalous).length } : null;
 
   // ERROR state
   if (status === "ERROR" && !data) {

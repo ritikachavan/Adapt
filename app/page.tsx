@@ -27,14 +27,17 @@ export default function HomePage() {
     let alive = true;
     (async () => {
       try {
-        const reconcileRes = await fetch("/api/reconcile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        });
+    let reconcileRes = await fetch("/api/reconcile");
+    if (!reconcileRes.ok) {
+      reconcileRes = await fetch("/api/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+    }
         if (!reconcileRes.ok) throw new Error("reconcile failed");
         const reconciled = (await reconcileRes.json()) as {
-          summary: { total: number; reviewed: number };
+          summary: { total: number; byDecision: Record<string, number> };
         };
         let learned = 0;
         try {
@@ -48,13 +51,14 @@ export default function HomePage() {
         }
         if (!alive) return;
         const total = reconciled.summary.total;
+        const reviewCount = reconciled.summary.byDecision?.REVIEW ?? 0;
         setStats({
           totalTransactions: total,
-          reviewCases: reconciled.summary.reviewed,
+          reviewCases: reviewCount,
           autoResolutionRate:
             total > 0
               ? Math.round(
-                  ((total - reconciled.summary.reviewed) / total) * 100
+                  ((total - reviewCount) / total) * 100
                 )
               : 0,
           learnedCorrections: learned,

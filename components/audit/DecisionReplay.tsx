@@ -30,7 +30,7 @@ interface ReplayData {
   };
   ai: {
     invoked: boolean;
-    status: "NOT_INVOKED" | "EVALUATED" | "UNAVAILABLE_FALLBACK";
+    status: "NOT_INVOKED" | "NOT_ESCALATED" | "EVALUATED" | "UNAVAILABLE_FALLBACK";
     message: string;
     decision?: string;
     confidence?: number;
@@ -382,6 +382,10 @@ export default function DecisionReplay({
           ) : data.ai.status === "UNAVAILABLE_FALLBACK" ? (
             <p className="rounded-lg bg-amber-50 p-3 text-sm font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
               AI unavailable — human review required.
+            </p>
+          ) : data.ai.status === "NOT_ESCALATED" ? (
+            <p className="rounded-lg bg-slate-50 p-3 text-sm font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+              AI was enabled but this case was not escalated for investigation (escalation cap reached). The deterministic decision remains the authoritative outcome.
             </p>
           ) : (
             <p className="text-sm leading-relaxed text-slate-600">

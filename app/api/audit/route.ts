@@ -1,13 +1,12 @@
-/**
+﻿/**
  * GET /api/audit?transactionId=pay_x
  *
  * DECISION REPLAY — assembles everything ADAPT knows about ONE transaction so
  * a reviewer can see exactly how its verdict was reached:
  *   1. financial records        (order / payment / settlements / refunds / ledger)
  *   2. deterministic decision   (from the reconciliation engine)
- *   3. AI judge stage           (only when an OLLAMA-sourced decision was stored;
- *                                otherwise an honest NOT_INVOKED /
- *                                UNAVAILABLE_FALLBACK status)
+ *   3. AI judge stage           (from the latest reconciliation result, if AI was run;
+ *                                otherwise an honest NOT_INVOKED status)
  *   4. human review             (stored Corrections for this transaction)
  *   5. correction memory        (rule-based recall from correction-memory.ts)
  *
@@ -22,7 +21,8 @@ import {
   getDb,
 } from "../../../lib/correction-memory";
 import { SAFE_FALLBACK_REASON } from "../../../lib/ai/provider";
-import type { FinancialDataBundle } from "../../../lib/types";
+import { getLatestResult } from "../reconcile/route";
+import type { DecisionResult, FinancialDataBundle } from "../../../lib/types";
 
 /** Local copy of the dataset loader (kept tiny to avoid cross-route coupling). */
 async function loadBundle(): Promise<FinancialDataBundle> {
@@ -44,13 +44,23 @@ async function loadBundle(): Promise<FinancialDataBundle> {
 
 interface AiStage {
   invoked: boolean;
-  status: "NOT_INVOKED" | "EVALUATED" | "UNAVAILABLE_FALLBACK";
+  status: "NOT_INVOKED" | "NOT_ESCALATED" | "EVALUATED" | "UNAVAILABLE_FALLBACK";
   message: string;
   decision?: string;
   confidence?: number;
   reason?: string;
   evidence?: unknown[];
   source?: string;
+  dualAgent?: {
+    mode: string;
+    ollamaDecision: string | null;
+    ollamaConfidence: number | null;
+    groqDecision: string | null;
+    groqConfidence: number | null;
+    evidenceValidationPassed: boolean | null;
+    evidenceValidationErrors: string[];
+    adjudication: string | null;
+  } | null;
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -104,48 +114,103 @@ export async function GET(request: Request): Promise<Response> {
         }
       : { present: false };
 
+    // AI stage: prefer the latest reconciliation result (includes AI if it was run).
+    // Fall back to stored decision rows (materialised during correction) when
+    // no live result is available, e.g. in isolated test runs.
+    const latest = getLatestResult();
+    const latestDecision: DecisionResult | undefined = latest
+      ? latest.decisions.find((d) => d.transactionId === transactionId)
+      : undefined;
+
     const db = getDb();
     const storedDecisions = await db.reconciliationDecision.findMany({
       where: { transactionId },
       orderBy: { createdAt: "desc" },
     });
-    const aiRow =
+    const storedAiRow =
       storedDecisions.find((r) => r.source === "OLLAMA" || r.source === "GROQ" || r.source === "FALLBACK") ?? null;
 
     let ai: AiStage;
-    if (!aiRow) {
+
+    if (latestDecision && latestDecision.aiStatus === "AI_SUCCESS") {
+      ai = {
+        invoked: true,
+        status: "EVALUATED",
+        message: latestDecision.dualAgent?.mode === "DUAL_AGENT"
+          ? "Evaluated by dual-agent AI verification (Resolution Analyst + Challenge Analyst)."
+          : "Evaluated by the local Ollama judge.",
+        decision: latestDecision.decision,
+        confidence: latestDecision.confidence,
+        reason: latestDecision.reason,
+        evidence: latestDecision.evidence,
+        source: latestDecision.source,
+        dualAgent: latestDecision.dualAgent ?? null,
+      };
+    } else if (latestDecision && latestDecision.aiStatus === "AI_FALLBACK") {
+      ai = {
+        invoked: true,
+        status: "UNAVAILABLE_FALLBACK",
+        message: "AI was invoked but could not produce a valid verdict. Human review required.",
+        decision: latestDecision.decision,
+        confidence: latestDecision.confidence,
+        reason: latestDecision.reason,
+        evidence: latestDecision.evidence,
+        source: latestDecision.source,
+        dualAgent: latestDecision.dualAgent ?? null,
+      };
+    } else if (latestDecision && latestDecision.aiStatus === "AI_SKIPPED") {
+      ai = {
+        invoked: true,
+        status: "NOT_ESCALATED",
+        message: "AI was enabled for this run but this case was not escalated (escalation cap reached).",
+        decision: latestDecision.decision,
+        confidence: latestDecision.confidence,
+        reason: latestDecision.reason,
+        evidence: latestDecision.evidence,
+        source: latestDecision.source,
+      };
+    } else if (latestDecision && latestDecision.aiStatus === "AI_NOT_REQUESTED") {
+      ai = {
+        invoked: false,
+        status: "NOT_INVOKED",
+        message: "AI was not requested for this reconciliation run.",
+      };
+    } else if (storedAiRow) {
+      // Fall back to stored decision rows (correction materialised)
+      if (storedAiRow.reason === SAFE_FALLBACK_REASON) {
+        ai = {
+          invoked: false,
+          status: "UNAVAILABLE_FALLBACK",
+          message: "AI unavailable — human review required.",
+          decision: storedAiRow.decision,
+          confidence: storedAiRow.confidence,
+          reason: storedAiRow.reason,
+          source: storedAiRow.source,
+        };
+      } else {
+        let parsedEvidence: unknown[] = [];
+        try {
+          parsedEvidence = JSON.parse(storedAiRow.evidence ?? "[]") as unknown[];
+        } catch {
+          parsedEvidence = [];
+        }
+        ai = {
+          invoked: true,
+          status: "EVALUATED",
+          message: "Evaluated by the local Ollama judge.",
+          decision: storedAiRow.decision,
+          confidence: storedAiRow.confidence,
+          reason: storedAiRow.reason,
+          evidence: parsedEvidence,
+          source: storedAiRow.source,
+        };
+      }
+    } else {
       ai = {
         invoked: false,
         status: "NOT_INVOKED",
         message:
           "AI not invoked — deterministic controller resolved or escalated this case.",
-      };
-    } else if (aiRow.reason === SAFE_FALLBACK_REASON) {
-      ai = {
-        invoked: false,
-        status: "UNAVAILABLE_FALLBACK",
-        message: "AI unavailable — human review required.",
-        decision: aiRow.decision,
-        confidence: aiRow.confidence,
-        reason: aiRow.reason,
-        source: aiRow.source,
-      };
-    } else {
-      let parsedEvidence: unknown[] = [];
-      try {
-        parsedEvidence = JSON.parse(aiRow.evidence ?? "[]") as unknown[];
-      } catch {
-        parsedEvidence = [];
-      }
-      ai = {
-        invoked: true,
-        status: "EVALUATED",
-        message: "Evaluated by the local Ollama judge.",
-        decision: aiRow.decision,
-        confidence: aiRow.confidence,
-        reason: aiRow.reason,
-        evidence: parsedEvidence,
-        source: aiRow.source,
       };
     }
 

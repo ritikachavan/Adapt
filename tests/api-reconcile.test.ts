@@ -24,22 +24,23 @@ describe("POST /api/reconcile", () => {
 
     const body = (await response.json()) as {
       decisions: DecisionResult[];
-      summary: Record<string, number>;
+      summary: { total: number; byDecision: Record<string, number> };
     };
     expect(body.summary.total).toBe(100);
     expect(body.decisions).toHaveLength(100);
+    const s = body.summary.byDecision;
     const summed =
-      body.summary.matched +
-      body.summary.reviewed +
-      body.summary.mismatched +
-      body.summary.missing +
-      body.summary.refunded;
+      s.MATCHED +
+      s.REVIEW +
+      s.MISMATCH +
+      s.MISSING +
+      s.REFUNDED;
     expect(summed).toBe(100);
     // The dataset plants ambiguous cases, so reviews exist even without AI.
-    expect(body.summary.reviewed).toBeGreaterThan(0);
+    expect(s.REVIEW).toBeGreaterThan(0);
     // Every failed AI attempt kept the safe fallback signature.
     const reviews = body.decisions.filter((d) => d.decision === "REVIEW");
-    expect(reviews.length).toBe(body.summary.reviewed);
+    expect(reviews.length).toBe(s.REVIEW);
   });
 
   it("escalates only REVIEW decisions to an injected AI provider", async () => {
@@ -74,7 +75,7 @@ describe("POST /api/reconcile", () => {
     expect(deterministic.length).toBe(100 - aiTouched.length);
     expect(deterministic.some((d) => d.decision === "REFUNDED")).toBe(true);
     expect(response.summary.total).toBe(100);
-    expect(response.summary.matched).toBeGreaterThan(0);
+    expect(response.summary.byDecision.MATCHED).toBeGreaterThan(0);
   });
 
   it("does not block on AI by default: REVIEW keeps its honest DETERMINISTIC source", async () => {
@@ -321,12 +322,13 @@ describe("POST /api/reconcile", () => {
 
   it("summary counts always sum to total", async () => {
     const response = await runReconciliation();
+    const s = response.summary.byDecision;
     const summed =
-      response.summary.matched +
-      response.summary.reviewed +
-      response.summary.mismatched +
-      response.summary.missing +
-      response.summary.refunded;
+      s.MATCHED +
+      s.REVIEW +
+      s.MISMATCH +
+      s.MISSING +
+      s.REFUNDED;
     expect(summed).toBe(response.summary.total);
     expect(response.summary.total).toBe(
       response.decisions.length

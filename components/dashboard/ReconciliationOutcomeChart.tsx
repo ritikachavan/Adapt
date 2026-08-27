@@ -5,15 +5,15 @@ interface Props {
 }
 
 const CATEGORIES: Array<{
-  key: keyof Omit<ReconciliationSummary, "total">;
+  key: "MATCHED" | "REVIEW" | "MISMATCH" | "MISSING" | "REFUNDED";
   label: string;
   color: string;
 }> = [
-  { key: "matched", label: "Matched", color: "bg-emerald-500" },
-  { key: "reviewed", label: "Review Required", color: "bg-amber-500" },
-  { key: "refunded", label: "Refunded", color: "bg-sky-500" },
-  { key: "mismatched", label: "Mismatch", color: "bg-rose-500" },
-  { key: "missing", label: "Missing", color: "bg-orange-400" },
+  { key: "MATCHED", label: "Matched", color: "bg-emerald-500" },
+  { key: "REVIEW", label: "Review Required", color: "bg-amber-500" },
+  { key: "REFUNDED", label: "Refunded", color: "bg-sky-500" },
+  { key: "MISMATCH", label: "Mismatch", color: "bg-rose-500" },
+  { key: "MISSING", label: "Missing", color: "bg-orange-400" },
 ];
 
 const CHART_HEIGHT_PX = 140;
@@ -26,7 +26,8 @@ export default function ReconciliationOutcomeChart({ summary }: Props) {
   const total = summary.total;
   if (total === 0) return null;
 
-  const maxVal = Math.max(...CATEGORIES.map((c) => summary[c.key]));
+  const counts = CATEGORIES.map((c) => summary.byDecision?.[c.key] ?? 0);
+  const maxVal = Math.max(...counts);
 
   return (
     <section
@@ -38,7 +39,7 @@ export default function ReconciliationOutcomeChart({ summary }: Props) {
           Reconciliation Outcome
         </h3>
         <p className="text-[11px] text-slate-400">
-          {total} records &middot; {Math.round((summary.matched / total) * 100)}% auto-matched
+          {total} records &middot; {Math.round(((summary.byDecision?.MATCHED ?? 0) / total) * 100)}% auto-matched
         </p>
       </div>
 
@@ -49,7 +50,7 @@ export default function ReconciliationOutcomeChart({ summary }: Props) {
         aria-label="Outcome counts"
       >
         {CATEGORIES.map((cat) => {
-          const count = summary[cat.key];
+          const count = summary.byDecision?.[cat.key] ?? 0;
           const barHeight = maxVal > 0 ? (count / maxVal) * CHART_HEIGHT_PX : 0;
           const showBar = count > 0;
 
@@ -90,4 +91,3 @@ export default function ReconciliationOutcomeChart({ summary }: Props) {
     </section>
   );
 }
-

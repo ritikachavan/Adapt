@@ -217,7 +217,8 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
               decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
             }`}>{
               decision.aiStatus === "AI_SUCCESS" ? "AI Investigated" :
-              decision.aiStatus === "AI_FALLBACK" ? "AI Fallback — Human Review Required" :              decision.aiStatus === "AI_SKIPPED" ? "AI Not Invoked" :
+              decision.aiStatus === "AI_FALLBACK" ? "AI Fallback — Human Review Required" :
+              decision.aiStatus === "AI_SKIPPED" ? "AI Not Invoked" :
               decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Not Requested" :
               SRC[decision.source] ?? decision.source
             }</span>

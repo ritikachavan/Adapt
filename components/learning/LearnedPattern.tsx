@@ -14,6 +14,7 @@ export default function LearnedPattern({
 }: {
   item: LearnedPatternItem;
 }) {
+  const confirmed = item.originalDecision === item.correctedDecision;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-2">
@@ -22,7 +23,7 @@ export default function LearnedPattern({
         </span>
         {item.createdAt && (
           <time className="text-[11px] text-slate-400">
-            {new Date(item.createdAt).toLocaleString()}
+            {new Date(item.correctionType === 'CONFIRMED_REVIEW' || confirmed ? item.createdAt : item.createdAt).toLocaleString()}
           </time>
         )}
       </header>
@@ -34,6 +35,12 @@ export default function LearnedPattern({
         </span>
         <DecisionChip label={item.correctedDecision} tone="strong" />
       </div>
+
+      {confirmed && (
+        <p className="mt-1.5 text-[10px] font-medium text-slate-500">
+          Outcome confirmed · reasoning or error category corrected for future pattern recall
+        </p>
+      )}
 
       <p className="mt-2 text-sm leading-relaxed text-slate-700">
         {item.explanation}

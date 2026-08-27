@@ -8,14 +8,14 @@ export default function HealthScore({ summary }: HealthScoreProps) {
   const total = summary.total;
   if (total === 0) return null;
 
-  const matched = Math.round((summary.matched / total) * 100);
-  const review = Math.round((summary.reviewed / total) * 100);
-  const mismatch = Math.round((summary.mismatched / total) * 100);
-  const missing = Math.round((summary.missing / total) * 100);
-  const refunded = Math.round((summary.refunded / total) * 100);
+  const matchedPct = Math.round(((summary.byDecision?.MATCHED ?? 0) / total) * 100);
+  const reviewPct = Math.round(((summary.byDecision?.REVIEW ?? 0) / total) * 100);
+  const mismatchPct = Math.round(((summary.byDecision?.MISMATCH ?? 0) / total) * 100);
+  const missingPct = Math.round(((summary.byDecision?.MISSING ?? 0) / total) * 100);
+  const refundedPct = Math.round(((summary.byDecision?.REFUNDED ?? 0) / total) * 100);
 
   // Health score: matched is good, everything else reduces it
-  const healthScore = matched;
+  const healthScore = matchedPct;
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return { text: "text-emerald-700", bg: "bg-emerald-500", ring: "ring-emerald-200" };
@@ -26,11 +26,11 @@ export default function HealthScore({ summary }: HealthScoreProps) {
   const scoreColor = getScoreColor(healthScore);
 
   const segments = [
-    { label: "Matched", pct: matched, color: "bg-emerald-500" },
-    { label: "Review Required", pct: review, color: "bg-amber-500" },
-    { label: "Mismatch", pct: mismatch, color: "bg-rose-500" },
-    { label: "Missing", pct: missing, color: "bg-orange-400" },
-    { label: "Refunded", pct: refunded, color: "bg-sky-500" },
+    { label: "Matched", pct: matchedPct, color: "bg-emerald-500" },
+    { label: "Review Required", pct: reviewPct, color: "bg-amber-500" },
+    { label: "Mismatch", pct: mismatchPct, color: "bg-rose-500" },
+    { label: "Missing", pct: missingPct, color: "bg-orange-400" },
+    { label: "Refunded", pct: refundedPct, color: "bg-sky-500" },
   ];
 
   return (

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/reconcile
  *
  * Pipeline:
@@ -55,11 +55,7 @@ import {
 
 export interface ReconciliationResponseSummary {
   total: number;
-  matched: number;
-  reviewed: number;
-  mismatched: number;
-  missing: number;
-  refunded: number;
+  byDecision: Record<ReconciliationDecision, number>;
 }
 
 export interface AiMetrics {
@@ -584,6 +580,7 @@ async function escalateReviews(
               transactionId: decision.transactionId,
               dualAgent: {
                 mode: "DUAL_AGENT",
+                deterministicDecision: decision.decision,
                 ollamaDecision: dualResult.agent1Verdict.decision,
                 ollamaConfidence: dualResult.agent1Verdict.confidence,
                 groqDecision: dualResult.agent2Verdict.decision,
@@ -711,7 +708,7 @@ export async function runReconciliation(
         apiKey: groqApiKey,
         model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
         baseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
-        timeoutMs: Number(process.env.GROQ_TIMEOUT_MS) || 30_000,
+        timeoutMs: Number(process.env.GROQ_TIMEOUT_MS) || 12_000,
       });
     }
   }
@@ -813,20 +810,13 @@ export async function runReconciliation(
       total:
         decisions.length,
 
-      matched:
-        count("MATCHED"),
-
-      reviewed:
-        count("REVIEW"),
-
-      mismatched:
-        count("MISMATCH"),
-
-      missing:
-        count("MISSING"),
-
-      refunded:
-        count("REFUNDED"),
+      byDecision: {
+        MATCHED: count("MATCHED"),
+        REVIEW: count("REVIEW"),
+        MISMATCH: count("MISMATCH"),
+        MISSING: count("MISSING"),
+        REFUNDED: count("REFUNDED"),
+      },
     },
 
     aiMetrics: {
@@ -881,6 +871,19 @@ let cachedResponse:
  * Dashboard and Review pages can retrieve this via GET.
  */
 let latestResult: ReconciliationResponse | null = null;
+
+/**
+ * Exposes the most recent reconciliation result (including AI) to other API routes
+ * so that /api/review and /api/audit always reflect the same authoritative state
+ * as the dashboard, rather than re-running deterministic-only reconciliation.
+ */
+export function getLatestResult(): ReconciliationResponse | null {
+  return latestResult;
+}
+
+export function setLatestResult(result: ReconciliationResponse | null): void {
+  latestResult = result;
+}
 
 export async function POST(
   request: Request
@@ -1027,3 +1030,4 @@ export async function GET(): Promise<Response> {
   }
   return Response.json({ error: "No reconciliation result available. Run reconciliation first." }, { status: 404 });
 }
+

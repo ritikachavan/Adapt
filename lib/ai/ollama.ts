@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ADAPT - Local Ollama AI Judge
  *
  * Safety:
@@ -30,7 +30,7 @@ const VALID_DECISIONS: readonly ReconciliationDecision[] = [
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:11434";
 const DEFAULT_MODEL = "qwen2.5:1.5b";
-const DEFAULT_TIMEOUT_MS = 120_000;
+const DEFAULT_TIMEOUT_MS = 12_000;
 const NUM_PREDICT = 512;
 const SEED = 42;
 
@@ -566,3 +566,4 @@ export function createOllamaJudgeProvider(
     },
   };
 }
+

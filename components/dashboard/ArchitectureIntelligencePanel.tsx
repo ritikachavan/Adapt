@@ -228,7 +228,7 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
         <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount + aiMetrics.aiFallbackCount)} Review Required</p>
         {isDualAgent && aiMetrics.aiEscalatedCount > 0 && (
           <p className="mt-1 text-[10px] text-slate-500">
-            {fmt(aiMetrics.aiSkippedCount - aiMetrics.aiSuccessCount)} AI skipped · {fmt(aiMetrics.aiEscalatedCount)} AI investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} agreements · {fmt(aiMetrics.aiFallbackCount)} fallback
+            {fmt(aiMetrics.aiSkippedCount)} AI skipped · {fmt(aiMetrics.aiEscalatedCount)} AI investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} agreements · {fmt(aiMetrics.aiFallbackCount)} fallback
           </p>
         )}
       </div>

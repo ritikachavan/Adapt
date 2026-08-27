@@ -111,7 +111,7 @@ export default function AIPanel({
                             { label: "Valid Responses", value: ollamaSuccesses ?? aiSuccessCount, color: "text-emerald-700" },
             ]),
             { label: "Fallbacks", value: aiFallbackCount, color: "text-amber-700" },
-            { label: "Not Invoked", value: aiSkippedCount, color: "text-slate-600" },
+            { label: aiEscalatedCount > 0 ? "Not Escalated" : "Not Requested", value: aiSkippedCount, color: "text-slate-600" },
           ].map((m) => (
             <div
               key={m.label}

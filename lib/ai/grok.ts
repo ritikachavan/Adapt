@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ADAPT — Grok Challenge Analyst Provider.
  * Implements AiJudgeProvider using xAI's Grok API.
  * Role: independent challenger searching for contradictory evidence.
@@ -201,7 +201,7 @@ function resolveEvidenceFromSources(
 }
 
 export function createGrokJudgeProvider(options: GrokProviderOptions): AiJudgeProvider {
-  const { apiKey, model = "llama-3.3-70b-versatile", baseUrl = "https://api.groq.com/openai/v1", timeoutMs = 30_000, fetchImpl } = options;
+  const { apiKey, model = "llama-3.3-70b-versatile", baseUrl = "https://api.groq.com/openai/v1", timeoutMs = 15_000, fetchImpl } = options;
   if (!apiKey || apiKey.trim() === "") {
     return { name: "groq:unavailable", async judge(ctx) { return createSafeFallback(ctx.paymentId); } };
   }
@@ -299,3 +299,4 @@ export function createGrokJudgeProvider(options: GrokProviderOptions): AiJudgePr
     },
   };
 }
+

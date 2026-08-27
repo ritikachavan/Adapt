@@ -178,7 +178,7 @@ describe("Investigation Agent", () => {
     // Validate pay_0006 investigation does NOT contain pay_0010 data
     expect(r6.transactionId).toBe("pay_0006");
     expect(r6.evidence.expectedAmount).toBe(5000);
-    expect(r6.evidence.paymentReference).toBe("ord_0006");
+    expect(r6.evidence.paymentReference).toBe("pay_0006");
     expect(r6.settlementCandidates.map((c) => c.id)).toEqual(["stl_0006"]);
     expect(r6.settlementCandidates.some((c) => c.id === "stl_0010")).toBe(false);
     expect(r6.settlementCandidates.some((c) => c.amount === 249)).toBe(false);
@@ -187,7 +187,7 @@ describe("Investigation Agent", () => {
     // Validate pay_0010 investigation contains only pay_0010 data
     expect(r10.transactionId).toBe("pay_0010");
     expect(r10.evidence.expectedAmount).toBe(249);
-    expect(r10.evidence.paymentReference).toBe("ord_0010");
+    expect(r10.evidence.paymentReference).toBe("pay_0010");
     expect(r10.settlementCandidates.map((c) => c.id)).toEqual(["stl_0010"]);
     expect(r10.settlementCandidates.some((c) => c.id === "stl_0006")).toBe(false);
     expect(r10.settlementCandidates.some((c) => c.amount === 5000)).toBe(false);

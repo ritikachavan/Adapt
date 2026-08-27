@@ -28,7 +28,7 @@ interface AiMetrics {
 
 export interface ReconciliationResult {
   decisions: TransactionRow[];
-  summary: { total: number; matched: number; reviewed: number; mismatched: number; missing: number; refunded: number };
+  summary: { total: number; byDecision: Record<string, number> };
   aiMetrics: AiMetrics;
 }
 
