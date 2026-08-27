@@ -51,7 +51,7 @@ export default function ReconciliationPipeline({ status, data, aiMode, onStageCl
     { id: "matched", title: "Matched", count: data?.matched ?? 0, desc: "Auto-resolved", color: "bg-emerald-600", ring: "ring-emerald-300", text: "text-emerald-700", clickable: true, filter: "MATCHED" },
     { id: "exceptions", title: "Non-Matched", count: exceptions, desc: "All non-matched records", color: "bg-amber-600", ring: "ring-amber-300", text: "text-amber-700", clickable: true, filter: "EXCEPTIONS" },
     { id: "anomaly-detection", title: "Anomalies", count: data?.anomalyCount ?? 0, desc: "Pattern intelligence", color: "bg-orange-600", ring: "ring-orange-300", text: "text-orange-700", clickable: false, filter: null },
-    { id: "ai-judge", title: "AI Judge", count: data?.aiEscalatedCount ?? 0, desc: data && data.aiEscalatedCount > 0 ? `${data.aiSuccessCount} success, ${data.aiFallbackCount} fallback` : "Not invoked", color: "bg-violet-600", ring: "ring-violet-300", text: "text-violet-700", clickable: false, filter: "OLLAMA" },
+    { id: "ai-judge", title: "AI Judge", count: data?.aiEscalatedCount ?? 0, desc: data && data.aiEscalatedCount > 0 ? `${data.aiEscalatedCount} investigated · ${data.aiSuccessCount} agreements · ${data.aiFallbackCount} safe fallback` : "Not invoked", color: "bg-violet-600", ring: "ring-violet-300", text: "text-violet-700", clickable: false, filter: "OLLAMA" },
     { id: "human-review", title: "Review Required", count: Math.max(0, humanReview), desc: "Awaiting decision", color: "bg-rose-600", ring: "ring-rose-300", text: "text-rose-700", clickable: true, filter: "REVIEW" },
   ];
 

@@ -346,7 +346,8 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[{ l: "Investigations", v: aiMetrics.aiEscalatedCount, c: "text-indigo-700" },
                 { l: "Agreements", v: aiMetrics.dualAgentAgreements ?? 0, c: "text-emerald-700" },
-                { l: "Fallback", v: aiMetrics.aiFallbackCount, c: "text-amber-700" },
+                { l: "Disagreements", v: aiMetrics.dualAgentDisagreements ?? 0, c: "text-amber-700" },
+                { l: "Safe Fallback", v: aiMetrics.aiFallbackCount, c: "text-amber-700" },
                 { l: "Not Escalated", v: aiMetrics.aiSkippedCount, c: "text-slate-600" }].map((m) => (
                 <div key={m.l} className="rounded-md bg-slate-50 px-2.5 py-1.5">
                   <p className="text-[10px] font-medium text-slate-500">{m.l}</p>
@@ -365,6 +366,11 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
             {aiMetrics.aiFallbackCount > 0 && (
               <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-200">
                 {'\u26A0'} {aiMetrics.aiFallbackCount} case{aiMetrics.aiFallbackCount > 1 ? "s" : ""} fell back to safe REVIEW. AI failures never produce MATCHED.
+              </p>
+            )}
+            {aiMetrics.dualAgentDisagreements !== null && aiMetrics.dualAgentDisagreements > 0 && aiMetrics.aiFallbackCount > 0 && (
+              <p className="mt-2 text-[11px] text-slate-400">
+                The {aiMetrics.dualAgentDisagreements} disagreement{aiMetrics.dualAgentDisagreements > 1 ? "s" : ""} and the {aiMetrics.aiFallbackCount} safe fallback refer to the same case{aiMetrics.dualAgentDisagreements > 1 ? "s" : ""}. Total investigations remain {aiMetrics.aiEscalatedCount}.
               </p>
             )}
           </div>

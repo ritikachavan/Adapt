@@ -80,6 +80,13 @@ export default function AIPanel({
           </div>
         ) : null}
 
+        {/* Summary line — keeps investigation totals unambiguous */}
+        {aiEnabled && aiEscalatedCount > 0 && (
+          <p className="mt-3 text-xs font-medium text-slate-700">
+            {aiEscalatedCount} investigation{aiEscalatedCount > 1 ? "s" : ""} · {agreements} agreement{agreements > 1 ? "s" : ""} · {disagreements} disagreement{disagreements > 1 ? "s" : ""} · {aiFallbackCount} safe fallback
+          </p>
+        )}
+
         {/* Status message */}
         {aiEnabled && aiEscalatedCount > 0 && (
           <p className="mt-3 text-xs text-slate-600">
@@ -112,7 +119,7 @@ export default function AIPanel({
             ] : [
                             { label: "Valid Responses", value: ollamaSuccesses ?? aiSuccessCount, color: "text-emerald-700" },
             ]),
-            { label: "Fallbacks", value: aiFallbackCount, color: "text-amber-700" },
+            { label: "Safe Fallbacks", value: aiFallbackCount, color: "text-amber-700" },
             { label: aiEscalatedCount > 0 ? "Not Escalated" : "Not Requested", value: aiSkippedCount, color: "text-slate-600" },
           ].map((m) => (
             <div
@@ -137,6 +144,11 @@ export default function AIPanel({
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-200">
             {aiFallbackCount} case{aiFallbackCount > 1 ? "s" : ""} fell back to
             safe REVIEW. AI failures never produce MATCHED.
+          </p>
+        )}
+        {disagreements > 0 && aiFallbackCount > 0 && (
+          <p className="mt-2 text-[11px] text-slate-400">
+            The {disagreements} disagreement{disagreements > 1 ? "s" : ""} and the {aiFallbackCount} safe fallback refer to the same case{disagreements > 1 ? "s" : ""} — total investigations remain {aiEscalatedCount}.
           </p>
         )}
       </div>

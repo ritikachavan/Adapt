@@ -217,7 +217,7 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
         <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
           <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.dualAgentAgreements)}</p><p className="text-[8px] text-slate-500">Agreements</p></div>
           <div><p className="text-xs font-bold tabular-nums text-amber-700">{fmt(aiMetrics.dualAgentDisagreements)}</p><p className="text-[8px] text-slate-500">Disagreements</p></div>
-          <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmt(aiMetrics.aiFallbackCount)}</p><p className="text-[8px] text-slate-500">Fallbacks</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmt(aiMetrics.aiFallbackCount)}</p><p className="text-[8px] text-slate-500">Safe Fallbacks</p></div>
         </div>
       </div>
 
@@ -228,7 +228,7 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
         <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount + aiMetrics.aiFallbackCount)} Review Required</p>
         {isDualAgent && aiMetrics.aiEscalatedCount > 0 && (
           <p className="mt-1 text-[10px] text-slate-500">
-            {fmt(aiMetrics.aiSkippedCount)} AI skipped · {fmt(aiMetrics.aiEscalatedCount)} AI investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} agreements · {fmt(aiMetrics.aiFallbackCount)} fallback
+              {fmt(aiMetrics.aiSkippedCount)} AI skipped · {fmt(aiMetrics.aiEscalatedCount)} AI investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} agreements · {fmt(aiMetrics.aiFallbackCount)} safe fallback
           </p>
         )}
       </div>

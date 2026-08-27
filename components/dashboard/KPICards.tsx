@@ -15,10 +15,10 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
   const matchRate = total > 0 ? Math.round((matched / total) * 100) : 0;
   const exceptions = reviewed + mismatched + missing;
 
-  const cards = [
+  const cards: Array<{ label: string; value: number | string; accent: string; sub?: string }> = [
     { label: "Records Processed", value: total, accent: "text-slate-900" },
     { label: "Match Rate", value: `${matchRate}%`, accent: matchRate >= 80 ? "text-emerald-700" : matchRate >= 60 ? "text-amber-700" : "text-rose-700" },
-    { label: "Open Cases", value: exceptions, accent: "text-amber-700" },
+    { label: "Open Cases", value: exceptions, accent: "text-amber-700", sub: `${reviewed} review · ${mismatched} mismatch · ${missing} missing` },
     { label: "AI Investigations", value: aiEscalatedCount ?? 0, accent: "text-violet-700" },
     { label: "Matched", value: matched, accent: "text-emerald-700" },
     { label: "Mismatch", value: mismatched, accent: "text-rose-700" },
@@ -32,6 +32,7 @@ export default function KPICards({ summary, aiEscalatedCount }: KPICardsProps) {
         <div key={kpi.label} className="bg-white p-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{kpi.label}</p>
           <p className={`mt-1 text-xl font-bold tabular-nums ${kpi.accent}`}>{kpi.value}</p>
+          {kpi.sub && <p className="mt-0.5 text-[10px] text-slate-400">{kpi.sub}</p>}
         </div>
       ))}
     </div>
