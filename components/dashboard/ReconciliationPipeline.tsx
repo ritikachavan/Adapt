@@ -43,7 +43,7 @@ export default function ReconciliationPipeline({ status, data, aiMode, onStageCl
   const activeStage = status === "COMPLETE" ? 99 : status === "PROCESSING" ? 1 : 0;
 
   const exceptions = data ? data.reviewed + data.mismatched + data.missing + data.refunded : 0;
-  const humanReview = data ? data.reviewed - data.aiSuccessCount : 0;
+  const humanReview = data ? data.reviewed : 0;
 
   const stages = [
     { id: "transactions", title: "Transactions", count: data?.total ?? 0, desc: "Financial records", color: "bg-slate-600", ring: "ring-slate-300", text: "text-slate-700", clickable: false, filter: null },
@@ -52,7 +52,7 @@ export default function ReconciliationPipeline({ status, data, aiMode, onStageCl
     { id: "exceptions", title: "Non-Matched", count: exceptions, desc: "All non-matched records", color: "bg-amber-600", ring: "ring-amber-300", text: "text-amber-700", clickable: true, filter: "EXCEPTIONS" },
     { id: "anomaly-detection", title: "Anomalies", count: data?.anomalyCount ?? 0, desc: "Pattern intelligence", color: "bg-orange-600", ring: "ring-orange-300", text: "text-orange-700", clickable: false, filter: null },
     { id: "ai-judge", title: "AI Judge", count: data?.aiEscalatedCount ?? 0, desc: data?.aiEnabled ? `${data.aiSuccessCount} success, ${data.aiFallbackCount} fallback` : "Not invoked", color: "bg-violet-600", ring: "ring-violet-300", text: "text-violet-700", clickable: false, filter: "OLLAMA" },
-    { id: "human-review", title: "Human Review", count: Math.max(0, humanReview), desc: "Awaiting decision", color: "bg-rose-600", ring: "ring-rose-300", text: "text-rose-700", clickable: true, filter: "REVIEW" },
+    { id: "human-review", title: "Review Required", count: Math.max(0, humanReview), desc: "Awaiting decision", color: "bg-rose-600", ring: "ring-rose-300", text: "text-rose-700", clickable: true, filter: "REVIEW" },
   ];
 
   const isStageActive = (i: number) => status !== "COMPLETE" && status !== "IDLE" && i === activeStage;

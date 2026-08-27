@@ -225,10 +225,10 @@ function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics;
       <div className="mt-2 rounded bg-emerald-50 px-2.5 py-2">
         <p className="text-[10px] font-semibold text-emerald-800">Human Decision</p>
         <p className="text-[9px] text-emerald-700">AI cannot finalize financial actions. A human reviewer remains responsible for unresolved cases.</p>
-        <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount)} Remain Pending Human Review</p>
+        <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount + aiMetrics.aiFallbackCount)} Review Required</p>
         {isDualAgent && aiMetrics.aiEscalatedCount > 0 && (
           <p className="mt-1 text-[10px] text-slate-500">
-            {fmt(aiMetrics.aiEscalatedCount)} AI Investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} Agreements · {fmt(aiMetrics.aiFallbackCount)} Fallback
+            {fmt(aiMetrics.aiSkippedCount - aiMetrics.aiSuccessCount)} AI skipped · {fmt(aiMetrics.aiEscalatedCount)} AI investigated · {fmt(aiMetrics.dualAgentAgreements ?? 0)} agreements · {fmt(aiMetrics.aiFallbackCount)} fallback
           </p>
         )}
       </div>

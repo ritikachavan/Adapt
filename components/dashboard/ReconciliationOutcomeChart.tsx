@@ -10,7 +10,7 @@ const CATEGORIES: Array<{
   color: string;
 }> = [
   { key: "matched", label: "Matched", color: "bg-emerald-500" },
-  { key: "reviewed", label: "Review", color: "bg-amber-500" },
+  { key: "reviewed", label: "Review Required", color: "bg-amber-500" },
   { key: "refunded", label: "Refunded", color: "bg-sky-500" },
   { key: "mismatched", label: "Mismatch", color: "bg-rose-500" },
   { key: "missing", label: "Missing", color: "bg-orange-400" },
