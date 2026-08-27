@@ -1,605 +1,706 @@
 
-# 🧠 ADAPT
+# ADAPT
 
-## AI Finance Controller
+AI FINANCE CONTROLLER
 
-> **Reconcile. Investigate. Explain. Keep humans in control.**
+Reconcile. Detect. Investigate. Verify. Decide.
 
-ADAPT is an AI-assisted financial reconciliation and exception-management system for payment and settlement operations.
-
-It is built around a simple principle:
-
-> **Deterministic logic establishes financial facts. AI reasons about ambiguity. Evidence constrains AI. Humans retain financial authority.**
-
-## ⚡ Why ADAPT?
-
-Traditional reconciliation can answer:
-
-> **"Did these records match?"**
-
-Finance operations need to answer more:
-
-- Why did this transaction fail to reconcile?
-- Is this a duplicate or a legitimate transaction?
-- Which settlement is actually relevant?
-- What evidence supports the conclusion?
-- What remains uncertain?
-- What should the investigator do next?
-- Should AI even be involved?
-
-**ADAPT is designed around those questions.**
+ADAPT is an AI-assisted financial reconciliation and exception-management system designed to help finance teams identify settlement issues, investigate ambiguous transactions, verify AI reasoning, and keep final financial authority with humans.
 
 
-# 🏗️ Architecture
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ THE CORE IDEA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ADAPT does NOT ask an AI model to make every financial decision.
+
+Instead:
+
+    FINANCIAL RECORDS
+           ↓
+    DETERMINISTIC RECONCILIATION
+           ↓
+    RISK + ANOMALY INTELLIGENCE
+           ↓
+    SELECTIVE AI INVESTIGATION
+           ↓
+    INDEPENDENT AI CHALLENGE
+           ↓
+    EVIDENCE VALIDATION
+           ↓
+    ADJUDICATION
+           ↓
+    HUMAN DECISION
+
+The principle is simple:
+
+    FACTS → RULES
+    AMBIGUITY → AI
+    VERIFICATION → DETERMINISTIC
+    AUTHORITY → HUMAN
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ FINANCIAL SAFETY BOUNDARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AI provides recommendations.
+
+AI does NOT have financial authority.
+
+    AI RECOMMENDATION
+           ↓
+    EVIDENCE VALIDATION
+           ↓
+    HUMAN APPROVAL
+           ↓
+    FINANCIAL ACTION
+
+No automatic financial mutation is performed by the AI layer.
+
+If AI fails, disagrees, times out, returns malformed output, or produces an invalid recommendation:
+
+    → SAFE REVIEW
+
+AI failure can never create a MATCHED financial outcome.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 WHAT ADAPT SOLVES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Traditional reconciliation often answers:
+
+    "Matched / Not Matched"
+
+ADAPT answers:
+
+    • What happened?
+    • What evidence supports it?
+    • Why did reconciliation fail?
+    • Is the record actually ambiguous?
+    • How risky is the exception?
+    • Is an anomaly present?
+    • Should AI investigate?
+    • Do independent AI analysts agree?
+    • Does the AI reasoning match the underlying records?
+    • What should the human investigator do next?
+    • What remains unknown?
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏗️ ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
                     TRANSACTIONS
                          │
                          ▼
               ┌─────────────────────┐
-              │   DETERMINISTIC     │
               │   RECONCILIATION    │
               │                     │
-              │ Amount              │
+              │ Amounts             │
               │ References          │
+              │ Settlement records  │
               │ Dates               │
-              │ Settlement          │
-              │ Lifecycle           │
+              │ Refund lifecycle    │
+              │ Candidate matching  │
               └──────────┬──────────┘
                          │
-                         ▼
-              ┌─────────────────────┐
-              │ RISK + ANOMALY      │
-              │ INTELLIGENCE        │
-              └──────────┬──────────┘
-                         │
-                  ┌──────┴──────┐
-                  │             │
-                  ▼             ▼
-             CLEAR CASE     AMBIGUOUS
-                  │             │
-                  │             ▼
-                  │      ┌───────────────┐
-                  │      │   AI JUDGE    │
-                  │      │               │
-                  │      │ Resolution    │
-                  │      │ + Challenge   │
-                  │      └───────┬───────┘
-                  │              │
-                  │              ▼
-                  │      ┌───────────────┐
-                  │      │ EVIDENCE      │
-                  │      │ VALIDATION    │
-                  │      └───────┬───────┘
-                  │              │
-                  └──────────────┤
-                                 ▼
-                       ┌──────────────────┐
-                       │ HUMAN AUTHORITY  │
-                       │                  │
-                       │ Final financial  │
-                       │ decision remains │
-                       │ with the human   │
-                       └──────────────────┘
-
-### The core rule
-
-**Rules establish facts.**
-
-**AI helps reason about ambiguity.**
-
-**Evidence validates AI claims.**
-
-**Humans make the final financial decision.**
+              ┌──────────┴──────────┐
+              │                     │
+              ▼                     ▼
+       CONFIDENT OUTCOME        EXCEPTION
+              │                     │
+              │                     ▼
+              │            ┌──────────────────┐
+              │            │ RISK + ANOMALY   │
+              │            │ INTELLIGENCE     │
+              │            └────────┬─────────┘
+              │                     │
+              │                     ▼
+              │              AMBIGUOUS CASE
+              │                     │
+              │                     ▼
+              │            ┌──────────────────┐
+              │            │    AI JUDGE      │
+              │            │                  │
+              │            │ Resolution       │
+              │            │ Challenge        │
+              │            └────────┬─────────┘
+              │                     │
+              │                     ▼
+              │            ┌──────────────────┐
+              │            │ EVIDENCE         │
+              │            │ VALIDATOR        │
+              │            └────────┬─────────┘
+              │                     │
+              └─────────────────────┤
+                                    ▼
+                           ┌──────────────────┐
+                           │ HUMAN REVIEW     │
+                           │                  │
+                           │ Final authority  │
+                           └──────────────────┘
 
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ 1. DETERMINISTIC RECONCILIATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# 🎯 Track 04 — AI Finance Controller
+The financial core is deterministic.
 
-ADAPT closes a finance-operations loop across a **100-record synthetic payment and settlement dataset**.
+ADAPT compares payment and settlement records using explicit rules rather than asking an LLM whether two financial records match.
 
-The system focuses on:
+The engine considers:
 
-- Multi-source reconciliation
-- Settlement investigation
-- Exception prioritization
-- Evidence-driven reasoning
-- Selective AI usage
-- Human-controlled resolution
-
-The objective is **not** to maximize the number of `MATCHED` transactions.
-
-The objective is:
-
-> **Correctly distinguish financial outcomes and make unresolved exceptions actionable.**
-
-
-# 📊 Measured Results
-
-ADAPT currently processes:
-
-| Outcome | Count |
-|---|---:|
-| **MATCHED** | **47** |
-| **REVIEW** | **24** |
-| **REFUNDED** | **21** |
-| **MISMATCH** | **4** |
-| **MISSING** | **4** |
-| **Total** | **100** |
-
-### Match rate
-
-# **47%**
-
-This is intentional.
-
-A financial reconciliation system should not inflate its match rate by incorrectly auto-matching ambiguous records.
-
-> **Correct differentiation matters more than a vanity match percentage.**
-
-
-
-# ⚙️ 1. Deterministic Reconciliation
-
-The financial foundation of ADAPT is deterministic.
-
-The system compares actual financial records using explicit rules rather than asking an LLM to determine whether money matches.
-
-It considers:
-
-- Payment amount
-- Settlement amount
-- Payment/order references
-- Settlement references
-- Settlement dates
-- Refund lifecycle
-- Candidate records
-- Ambiguous candidates
+    • Payment amount
+    • Settlement amount
+    • Payment ID
+    • Order ID
+    • Settlement ID
+    • Customer/reference information
+    • Settlement dates
+    • Candidate settlement records
+    • Refund lifecycle
+    • Duplicate candidates
+    • Ambiguous references
 
 Possible outcomes:
 
+    MATCHED
+    REVIEW
+    MISMATCH
+    MISSING
+    REFUNDED
 
-MATCHED
-REVIEW
-MISMATCH
-MISSING
-REFUNDED
+This makes the core reconciliation layer:
 
-
-### Why deterministic first?
-
-It makes the financial foundation:
-
-- **Reproducible**
-- **Auditable**
-- **Testable**
-- **Explainable**
-- **Independent of LLM behavior**
+    ✓ Reproducible
+    ✓ Testable
+    ✓ Explainable
+    ✓ Auditable
+    ✓ Independent of LLM behavior
 
 
-# 🧭 2. Risk Intelligence
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔎 2. RISK INTELLIGENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Risk answers:
 
-> **"How urgently should this case be investigated?"**
+    "How urgently should this case be investigated?"
 
-ADAPT uses an explicit weighted heuristic:
+ADAPT uses explicit, explainable heuristic weights.
 
-Risk Score =
-    30 × amountDiscrepancy
-  + 20 × candidateAmbiguity
-  + 15 × weakEvidence
-  + 10 × dataQuality
-  +  5 × temporalInconsistency
-  + 15 × decisionSeverity
-  +  5 × aiFallback
+    Risk Score =
+        30 × amountDiscrepancy
+      + 20 × candidateAmbiguity
+      + 15 × weakEvidence
+      + 10 × dataQuality
+      +  5 × temporalInconsistency
+      + 15 × decisionSeverity
+      +  5 × aiFallback
 
 Classification:
 
+    < 30       LOW
+    30–69      MEDIUM
+    70+        HIGH
 
-< 30       LOW
-30–69      MEDIUM
-70+        HIGH
-```
+The weights are deliberately transparent.
 
-These are **domain-reasoned heuristic weights**, not claims of ML-trained calibration.
+They are not presented as ML-trained coefficients.
 
-A production system could calibrate them using:
+For production deployment, these weights should be calibrated against historical labeled cases and financial outcomes.
 
-- Historical financial loss
-- Investigation outcomes
-- False-positive rates
-- False-negative rates
 
-# 🔎 3. Anomaly Intelligence
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧬 3. ANOMALY INTELLIGENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Anomaly detection answers:
+Risk and anomaly detection are separate concepts.
 
-> **"What unusual pattern exists?"**
+Risk asks:
 
-Signals include:
+    "How urgently should this be investigated?"
 
-- Amount discrepancy
-- Missing settlement
-- Duplicate candidates
-- Near-duplicate references
-- Temporal inconsistency
-- Conflicting evidence
-- Incomplete evidence
+Anomaly detection asks:
+
+    "What unusual pattern exists?"
+
+ADAPT can detect signals including:
+
+    • Amount discrepancy
+    • Missing settlement
+    • Duplicate candidates
+    • Near-duplicate references
+    • Temporal inconsistency
+    • Conflicting evidence
+    • Incomplete evidence
 
 Signal severity:
 
+    HIGH      35
+    MEDIUM    20
+    LOW       10
 
-HIGH      35
-MEDIUM    20
-LOW       10
+Combined anomaly severity:
 
-
-Overall classification:
-
-
-60+       HIGH
-30+       MEDIUM
-> 0       LOW
-0         NO ANOMALY
+    60+       HIGH
+    30+       MEDIUM
+    > 0       LOW
 
 
-Risk and anomaly severity are intentionally independent.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧠 4. SELECTIVE AI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-A transaction can therefore be:
+ADAPT does not send every transaction to an LLM.
 
+Straightforward cases are handled by deterministic logic.
 
-LOW RISK + MEDIUM ANOMALY
-```
+Only selected ambiguous cases are escalated.
 
-without requiring the highest investigation priority.
+Current architecture:
 
-# 🧠 4. Selective AI Judge
+    100 transactions
+         ↓
+    Deterministic processing
+         ↓
+    Risk + anomaly intelligence
+         ↓
+    Selected ambiguous cases
+         ↓
+    AI investigation
 
-ADAPT does **not** send every transaction to an LLM.
+This reduces:
 
-Clear cases are handled deterministically.
+    • Unnecessary AI calls
+    • Latency
+    • AI cost
+    • Probabilistic decision surface
+    • Exposure of straightforward cases to LLM reasoning
 
-Only ambiguous cases are candidates for AI reasoning.
+Core principle:
 
-100 transactions
-       │
-       ├── Deterministic handling
-       │
-       ├── Human review
-       │
-       └── Selected ambiguous cases
-                    │
-                    ▼
-                  AI
-
-
-### Local AI
-
-```text
-Ollama
-└── qwen2.5:1.5b
-
-Ollama provides local/offline reasoning during development.
-
-The provider is isolated behind the AI layer so it can be replaced without redesigning the reconciliation system.
+    DETERMINISTIC FIRST.
+    AI WHERE IT ADDS VALUE.
 
 
-# 🔍 5. Investigation Agent
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🤖 5. DUAL-AGENT AI VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ADAPT moves beyond simply labeling an exception.
+ADAPT uses two independent AI perspectives.
 
-The Investigation Agent follows a bounded investigation process:
+RESOLUTION ANALYST
+
+    Provider: Ollama
+    Model: qwen2.5:1.5b
+
+Purpose:
+
+    Produce an initial evidence-based recommendation.
+
+CHALLENGE ANALYST
+
+    Provider: Groq
+    Model: qwen/qwen3.8-27b
+
+Purpose:
+
+    Independently review the same evidence
+    and challenge the first recommendation.
+
+The architecture is:
+
+    Resolution Analyst
+            ↓
+    Challenge Analyst
+            ↓
+    Evidence Validator
+            ↓
+    Adjudication
+            ↓
+    Recommendation OR Safe Review
+
+The second model does not exist to create artificial certainty.
+
+Its purpose is to make disagreement visible.
 
 
-Exception
-   ↓
-Search candidates
-   ↓
-Compare amounts
-   ↓
-Compare references
-   ↓
-Compare dates
-   ↓
-Assess evidence
-   ↓
-Identify uncertainty
-   ↓
-Generate recommendation
-```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 6. EVIDENCE VALIDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The agent works from **actual financial records**.
+AI does not define the financial facts.
 
-It does not fabricate evidence.
+The Evidence Validator checks AI claims against the underlying transaction and settlement records.
 
-An investigation can expose:
+Example:
 
-- Expected amount
-- Candidate settlement amounts
-- Amount-match status
-- Payment ID
-- Order ID
-- Settlement ID
-- References
-- Dates
-- Evidence sufficiency
-- Remaining risk
-- Missing evidence
-- Recommended action
-- Confidence
-- Authority boundary
+    AI:
+    "Settlement amount matches payment amount."
 
-# 🛡️ 6. AI Safety
+                 ↓
 
-AI is treated as a **bounded reasoning component**, not the financial system of record.
+    Validator checks:
+
+    • Payment amount
+    • Settlement amount
+    • Settlement ID
+    • Candidate record
+    • Referenced evidence
+
+                 ↓
+
+            PASS / REJECT
+
+This creates a hard boundary between:
+
+    AI reasoning
+
+and
+
+    Financial evidence
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🕵️ 7. INVESTIGATION AGENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Investigation Agent handles ambiguous cases.
+
+Investigation flow:
+
+    1. Receive exception
+    2. Search settlement candidates
+    3. Compare amounts
+    4. Compare references
+    5. Compare dates
+    6. Assess evidence
+    7. Identify uncertainty
+    8. Identify missing evidence
+    9. Recommend next action
+
+The agent works from actual financial records.
+
+It can expose:
+
+    • Expected amount
+    • Candidate amounts
+    • Amount-match status
+    • Payment ID
+    • Order ID
+    • Settlement ID
+    • References
+    • Dates
+    • Evidence sufficiency
+    • Remaining uncertainty
+    • Recommended action
+    • Confidence
+    • Authority boundary
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 8. CONTROL PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ADAPT does not stop at:
+
+    "REVIEW"
+
+An investigation produces a structured Control Plan.
+
+FINDING
+
+    What is currently known.
+
+EVIDENCE
+
+    Which source records support the finding.
+
+UNCERTAINTY
+
+    What remains unresolved.
+
+MISSING EVIDENCE
+
+    What information is still required.
+
+RECOMMENDED ACTION
+
+    What the investigator should verify next.
+
+AUTHORITY
+
+    Whether the system is permitted to act.
+
+The final boundary remains:
+
+    RECOMMENDATION ONLY
+           ↓
+    NO AUTOMATIC MUTATION
+           ↓
+    HUMAN APPROVAL REQUIRED
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 9. HUMAN REVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ambiguous cases are surfaced in the Human Review queue.
+
+Reviewers can:
+
+    • Inspect the transaction
+    • Inspect settlement candidates
+    • Review evidence
+    • See deterministic reasoning
+    • See AI reasoning
+    • Inspect AI disagreements
+    • Confirm or change the verdict
+    • Record the reason for a correction
+
+Possible human correction categories include:
+
+    WRONG_MATCH
+    FALSE_POSITIVE
+    MISCLASSIFIED
+    FEE_MISREAD
+    SPLIT_OVERLOOKED
+    DUPLICATE_CONFIRMED_LEGIT
+    OTHER
+
+The reviewer remains the final financial authority.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔁 10. CORRECTION MEMORY / LEARNING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ADAPT records human corrections as structured patterns.
+
+Future ambiguous cases can surface relevant historical corrections based on deterministic rule-based recall.
+
+The system does not claim that a stored correction "learned" something unless the correction actually influenced the current decision.
+
+The memory layer can use signals such as:
+
+    • Same transaction
+    • Same mistake category
+    • Similar remediation direction
+    • Previously observed correction pattern
+
+Important distinction:
+
+    STORED MEMORY
+        ≠
+    AUTOMATICALLY INFERRED TRUTH
+
+Corrections remain traceable and reviewable.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 11. ASK ADAPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ask ADAPT provides a natural-language interface over the financial records.
+
+A user can ask questions about the current reconciliation dataset.
+
+Example:
+
+    "Which settlements have the largest variance?"
+
+ADAPT retrieves relevant financial evidence and returns:
+
+    • Answer
+    • Supporting transactions
+    • Recommendation
+
+The answer remains grounded in ADAPT's financial records.
+
+The local AI layer is used for reasoning over those records, not as a replacement for the underlying financial data.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 CURRENT SYSTEM RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current synthetic dataset:
+
+    Transactions processed       100
+
+    Matched                     50
+    Review Required             21
+    Refunded                    21
+    Mismatch                     4
+    Missing                      4
+
+    Match rate                  50%
+
+    Anomaly records             28
+
+    AI investigations            4
+    AI agreements                3
+    AI disagreements             1
+    AI fallbacks                 1
+    AI skipped                  20
+
+Financial exposure requiring investigation:
+
+    ₹2,41,005
+
+Breakdown:
+
+    Review Required             ₹2,39,980
+    Mismatch                     ₹1,025
+
+Exposure calculation:
+
+    MISMATCH
+    = |expected amount − actual amount|
+
+    MISSING / REVIEW
+    = expected amount
+
+    REFUNDED
+    = excluded
+
+These figures are generated from the current synthetic dataset and are not presented as production financial performance metrics.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ AI SAFETY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The AI layer is treated as an untrusted reasoning component.
 
 ADAPT validates:
 
-- Allowed decision values
-- Confidence bounds
-- Referenced record IDs
-- Candidate membership
-- Malformed responses
-- Empty responses
-- Provider failures
-- Timeouts
-- Invalid JSON
-- Unsupported decisions
+    ✓ Allowed decision values
+    ✓ Confidence bounds
+    ✓ Referenced transaction IDs
+    ✓ Candidate record membership
+    ✓ Malformed responses
+    ✓ Missing responses
+    ✓ Provider failures
+    ✓ Timeouts
+    ✓ Invalid JSON
+    ✓ Unsupported decisions
 
-### Critical safety rule
+Failure path:
 
-> **AI failure cannot create a `MATCHED` financial outcome.**
-
-If AI produces invalid or unsafe output:
-
-```text
-AI FAILURE
-    ↓
-SAFE REVIEW
-    ↓
-HUMAN INVESTIGATION
-
-
-
-
-# 🔗 7. Evidence Traceability
-
-Investigation claims are tied to actual records.
-
-
-Expected Amount
-      ↓
-Payment Record
-
-Candidate Amount
-      ↓
-Settlement Record
-
-Payment Reference
-      ↓
-Payment / Order Record
-
-Settlement Reference
-      ↓
-Settlement Record
-
-
-The agent does not invent missing evidence.
-
-When evidence is insufficient:
-
-
-INSUFFICIENT EVIDENCE
+    AI FAILURE
         ↓
-      REVIEW
+    SAFE REVIEW
+
+Never:
+
+    AI FAILURE
         ↓
-REQUEST / FIND MISSING EVIDENCE
+    MATCHED
 
 
-# 📋 8. Control Plan
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 OPERATIONAL MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-An investigation should not end with:
+ADAPT separates financial processing into distinct layers.
 
-> **"REVIEW."**
+LAYER 1 — RECONCILIATION
 
-ADAPT provides a structured Control Plan.
+    Establish financial facts using deterministic rules.
 
-### Finding
-What the system currently knows.
+LAYER 2 — INTELLIGENCE
 
-### Evidence
-Which actual records support the finding.
+    Detect anomalies and prioritize investigation.
 
-### Uncertainty
-What remains unresolved.
+LAYER 3 — AI
 
-### Missing Evidence
-What information is still required.
+    Reason about selected ambiguous cases.
 
-### Recommended Action
-What the investigator should check next.
+LAYER 4 — VALIDATION
 
-### Authority
-Whether the system is allowed to act.
+    Verify AI claims against source records.
 
-The financial boundary is explicit:
+LAYER 5 — HUMAN AUTHORITY
+
+    Make the final financial decision.
 
 
-RECOMMENDATION ONLY
-        ↓
-NO AUTOMATIC MUTATION
-        ↓
-HUMAN APPROVAL REQUIRED
-
-
-# 👤 9. Human Authority
-
-ADAPT does not give AI unrestricted financial authority.
-
-
-AI
- ↓
-Recommendation
- ↓
-Evidence
- ↓
-Human Review
- ↓
-Financial Authority
-```
-
-**AI recommends.**
-
-**Evidence constrains.**
-
-**Humans decide.**
-
-
-
-# 📊 10. Dashboard Intelligence
-
-The dashboard is designed as an operational finance command center.
-
-It exposes:
-
-### Reconciliation Health
-
-- Match rate
-- Review rate
-- Mismatch rate
-- Missing settlements
-- Refunds
-
-### Reconciliation Outcome
-
-```text
-MATCHED
-REVIEW
-REFUNDED
-MISMATCH
-MISSING
-```
-
-### Audit Intelligence
-
-- Exception exposure
-- Exception breakdown
-- Risk distribution
-- Anomaly distribution
-- Resolution priorities
-- AI routing metrics
-
-### Architecture Intelligence
-
-```text
-Reconciliation
-      ↓
-Risk + Anomaly
-      ↓
-AI Judge
-      ↓
-Investigation Agent
-      ↓
-Human Authority
-
-
-# 🧪 Testing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 TESTING & VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Current verification:
 
+    TypeScript        PASS
+    Tests             180 / 180 PASS
+    Production build  PASS
 
-TypeScript
-PASS
+The test suite covers areas including:
 
-Tests
-180 / 180 PASS
+    • Deterministic reconciliation
+    • Matched transactions
+    • Missing settlements
+    • Mismatches
+    • Refunds
+    • Ambiguous candidates
+    • Duplicate detection
+    • Near-duplicate references
+    • Risk scoring
+    • Anomaly detection
+    • AI routing
+    • AI fallback behavior
+    • Evidence validation
+    • Investigation behavior
+    • Control Plan generation
+    • Correction flow
+    • Safety boundaries
+    • Transaction identifiers
+    • AI output validation
 
-Build
-PASS
+Verification commands:
 
-Verification covers:
-
-- Deterministic reconciliation
-- Matching
-- Missing settlements
-- Mismatches
-- Refunds
-- Ambiguous candidates
-- Duplicate detection
-- Near-duplicate references
-- Risk scoring
-- Anomaly detection
-- AI routing
-- AI fallback behavior
-- Investigation behavior
-- Control Plan generation
-- Correction flow
-- Safety boundaries
-- Identifier correctness
-- AI output validation
-
-
-
-# 🔁 Correction Flow
-
-Human reviewers can correct classifications through structured correction flows.
-
-Examples include:
-
-```text
-WRONG_MATCH
-FALSE_POSITIVE
-MISCLASSIFIED
-FEE_MISREAD
-SPLIT_OVERLOOKED
-DUPLICATE_CONFIRMED_LEGIT
-OTHER
-
-Corrections require an explanation.
-
-The system can preserve correction information as structured feedback for future learning workflows.
-
-The original decision remains traceable.
+    npx tsc --noEmit
+    npm test
+    npm run build
 
 
-# 📈 Scale Strategy
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧰 TECHNOLOGY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The demo contains **100 transactions**.
+Frontend / Application
 
-The architecture separates deterministic processing from AI reasoning.
+    Next.js
+    React
+    TypeScript
 
-At larger volumes:
+AI
+
+    Ollama
+    qwen2.5:1.5b
+
+    Groq
+    qwen/qwen3.8-27b
+
+Core architecture
+
+    Deterministic reconciliation
+    Rule-based risk scoring
+    Rule-based anomaly detection
+    AI investigation
+    Evidence validation
+    Human review
+    Correction memory
 
 
-Database / Batch Input
-        ↓
-Indexed Deterministic Reconciliation
-        ↓
-Risk + Anomaly Processing
-        ↓
-Queue Ambiguous Cases
-        ↓
-Selective AI Investigation
-        ↓
-Human Review
-
-The key scalability principle:
-
-> **10,000 transactions should not require 10,000 LLM calls.**
-
-Production deployment would additionally require:
-
-- Database indexing
-- Queue infrastructure
-- Concurrency controls
-- Load testing
-- AI latency benchmarking
-- AI cost benchmarking
-- Observability
-- Production security controls
-
-# 🗂️ Project Structure
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗂️ PROJECT STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 app/
 ├── api/
@@ -648,321 +749,172 @@ tests/
 ├── api-reconcile.test.ts
 └── investigation.test.ts
 
-# 🎬 5-Minute Demo
 
-## 01 — Problem
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 RUNNING ADAPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Start with:
+Install dependencies:
 
-> **"Reconciliation tells you what didn't match. ADAPT helps determine why, what evidence exists, and what should happen next."**
+    npm install
 
+Start development server:
 
-## 02 — Architecture
+    npm run dev
 
-Show:
+Run type checking:
 
+    npx tsc --noEmit
 
-Deterministic
-      ↓
-Risk + Anomaly
-      ↓
-Selective AI
-      ↓
-Investigation
-      ↓
-Evidence Validation
-      ↓
-Human Authority
+Run tests:
 
+    npm test
 
-Emphasize:
+Create production build:
 
-> **AI is not the first step.**
+    npm run build
 
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔌 AI PROVIDERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-## 03 — Clean Match
+Ollama provides local model inference for the Resolution Analyst.
 
-Open an exact settlement match.
+The AI provider is isolated behind the AI layer so that the underlying model or provider can be replaced without redesigning the reconciliation engine.
 
-Show:
+Groq provides the independent Challenge Analyst.
 
-- Payment
-- Settlement
-- Amount
-- Evidence
-- Decision
-
-Explain that straightforward cases do not require an LLM.
+Provider credentials and configuration should be supplied through environment configuration and must never be exposed to the client-side application.
 
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 SCALING TOWARD PRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-## 04 — Ambiguous Case
+The current implementation demonstrates the architecture using a 100-record synthetic dataset.
 
-Open a `REVIEW` case.
+A production deployment would separate high-volume deterministic processing from the smaller AI investigation workload.
 
-Show:
+Example:
 
-- Candidate records
-- Amount comparison
-- Near-duplicate signal
-- Evidence
-- Uncertainty
-- Investigation Agent
-- Control Plan
-- Recommended action
+    DATABASE / BATCH INPUT
+             ↓
+    DETERMINISTIC RECONCILIATION
+             ↓
+    RISK + ANOMALY ANALYSIS
+             ↓
+    AMBIGUOUS CASE QUEUE
+             ↓
+    SELECTIVE AI INVESTIGATION
+             ↓
+    EVIDENCE VALIDATION
+             ↓
+    HUMAN REVIEW
 
-Key message:
+The objective is:
 
-> **ADAPT refuses to turn ambiguity into false certainty.**
+    10,000 transactions
+          ≠
+    10,000 LLM calls
+
+Most records should remain in the deterministic path.
+
+Production hardening would additionally require:
+
+    • Database indexing
+    • Queue infrastructure
+    • Concurrency controls
+    • Rate limiting
+    • Retry policies
+    • Observability
+    • Load testing
+    • Model latency benchmarking
+    • AI cost benchmarking
+    • Security hardening
+    • Historical risk calibration
+    • Access control
+    • Audit retention policies
 
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 DESIGN PRINCIPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-## 05 — AI
+01 — DETERMINISTIC FIRST
 
-Show the AI routing and investigation flow.
+Financial facts should be established with deterministic logic whenever possible.
 
-Explain:
+02 — AI FOR AMBIGUITY
 
-> **AI is used selectively, not indiscriminately.**
+LLMs are used where interpretation and investigation provide additional value.
 
-The model is a reasoning component, not the financial authority.
+03 — EVIDENCE OVER ASSERTION
+
+AI claims must be checked against source records.
+
+04 — DISAGREEMENT IS A SIGNAL
+
+When independent AI analysts disagree, ADAPT preserves uncertainty rather than manufacturing confidence.
+
+05 — SAFE FAILURE
+
+AI failures fall back to human review.
+
+06 — HUMAN AUTHORITY
+
+AI cannot finalize financial actions.
+
+07 — TRACEABILITY
+
+Decisions, evidence, corrections, and reasoning remain inspectable.
+
+08 — SELECTIVE COMPUTE
+
+Expensive AI reasoning is reserved for cases that actually need it.
 
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏁 WHY ADAPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-## 06 — Safety
+ADAPT combines four capabilities that are often treated separately:
 
-Close with:
+    FINANCIAL RECONCILIATION
+             +
+    ANOMALY / RISK INTELLIGENCE
+             +
+    VERIFIED AI INVESTIGATION
+             +
+    HUMAN-CONTROLLED DECISION MAKING
 
-AI RECOMMENDATION
+The result is not simply an AI chatbot for finance.
+
+It is a controlled financial investigation workflow.
+
+    RECONCILE
         ↓
-EVIDENCE VALIDATION
+    DETECT
         ↓
-HUMAN REVIEW
+    INVESTIGATE
         ↓
-FINANCIAL AUTHORITY
-
-
-
-
-# ❓ Judge Questions
-
-### "Why is the match rate only 47%?"
-
-Because ADAPT prioritizes correct classification over maximizing the match percentage.
-
-The dataset intentionally contains:
-
-
-47 MATCHED
-24 REVIEW
-21 REFUNDED
-4  MISMATCH
-4  MISSING
-
-
-Forcing ambiguous records into `MATCHED` would create a misleading result.
-
-
-
-### "Why not send every transaction to AI?"
-
-Because deterministic reconciliation is better suited to clear financial comparisons.
-
-Sending everything to an LLM would increase:
-
-- Cost
-- Latency
-- Failure surface
-- Non-determinism
-
-ADAPT uses:
-
-
-Deterministic first
+    CHALLENGE
         ↓
-AI where reasoning helps
+    VALIDATE
         ↓
-Human where uncertainty remains
-
-
-
-### "Were the risk weights ML-trained?"
-
-No.
-
-They are explicit domain-reasoned heuristics.
-
-They are inspectable and tunable.
-
-Production calibration would use historical financial outcomes.
-
-
-
-### "What happens when AI fails?"
-
-The system falls back to:
-
-REVIEW
-
-
-AI failure cannot create a `MATCHED` result.
-
-
-
-### "Why use a local 1.5B model?"
-
-The local Ollama model demonstrates bounded, locally controlled reasoning.
-
-The provider is isolated and replaceable.
-
-
-
-### "Can AI change financial records?"
-
-**No.**
-
-The architecture explicitly separates:
-
-
-Recommendation
-      ↓
-Evidence
-      ↓
-Human approval
-      ↓
-Financial action
-
-
-### "What happens at 10,000 transactions?"
-
-The deterministic layer handles the majority of records.
-
-Only ambiguous cases need AI investigation.
-
-
-10,000 transactions
+    ADJUDICATE
         ↓
-Deterministic processing
-        ↓
-Small ambiguous subset
-        ↓
-AI investigation
-        ↓
+    DECIDE
 
 
-# 🏆 Why ADAPT Fits Track 04
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADAPT
+AI Finance Controller
 
-The track asks for:
+Deterministic finance controls.
+Selective AI reasoning.
+Evidence-driven investigation.
+Human financial authority.
 
-> **Throughput + measured accuracy + an honest exception list.**
-
-ADAPT provides:
-
-### Throughput
-
-**100-record financial batch processed through the reconciliation pipeline.**
-
-### Measured Results
-
-```text
-47 MATCHED
-24 REVIEW
-21 REFUNDED
-4  MISMATCH
-4  MISSING
-```
-
-### Honest Exceptions
-
-Ambiguous transactions remain `REVIEW` rather than being artificially converted into matches.
-
-### AI Judgment
-
-AI is selectively used where ambiguity requires reasoning.
-
-### Evidence
-
-AI recommendations are constrained by actual financial records.
-
-### Failure Recovery
-
-Unsafe or failed AI reasoning falls back to human review.
-
-### Build Quality
-
-
-TypeScript: PASS
-Tests:      180 / 180 PASS
-Build:      PASS
-
-
-### Human Control
-
-**AI does not receive automatic financial authority.**
-
-
-
-# 🎯 The Core Idea
-
-Most financial AI systems ask:
-
-> **"Can AI make the decision?"**
-
-ADAPT asks:
-
-> **"Where can AI safely make financial operations better without giving up control?"**
-
-
-              FACTS
-                │
-                ▼
-        DETERMINISTIC CORE
-                │
-                ▼
-          RISK + ANOMALY
-                │
-                ▼
-          SELECTIVE AI
-                │
-                ▼
-        INVESTIGATION
-                │
-                ▼
-       EVIDENCE VALIDATION
-                │
-                ▼
-        HUMAN AUTHORITY
-```
-
-> **ADAPT doesn't replace the financial controller.**
->
-> **It gives the financial controller a better investigation system.**
-
----
-
-# ✅ Status
-
-| Check | Status |
-|---|---|
-| Deterministic reconciliation | ✅ PASS |
-| Risk intelligence | ✅ PASS |
-| Anomaly detection | ✅ PASS |
-| Selective AI routing | ✅ PASS |
-| Investigation Agent | ✅ PASS |
-| Evidence traceability | ✅ PASS |
-| AI safety / fallback | ✅ PASS |
-| Human authority boundary | ✅ PASS |
-| TypeScript | ✅ PASS |
-| Tests | ✅ 180 / 180 PASS |
-| Production build | ✅ PASS |
-| Automatic financial mutation by AI | ❌ Not permitted |
-
-
-
-# 🧠 ADAPT
-
-### **Deterministic finance controls + selective AI reasoning + evidence-driven investigation + human authority.**
-
-> **AI should increase the capacity of financial teams — not remove their control.**
+AI should increase the capacity of financial teams — not remove their control.
 
