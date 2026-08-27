@@ -321,14 +321,15 @@ function buildJudgeContext(
 }
 
 /**
- * IMPORTANT:
+ * Maximum number of AI escalations to run in parallel.
  *
- * Only ONE Ollama request runs at a time.
- *
- * Local CPU inference becomes dramatically slower
- * when multiple generations compete for resources.
+ * The AI stage wall-time is bounded by the number of sequential batches:
+ * ceil(escalations / MAX_AI_PARALLEL) x providerTimeout. Running all selected
+ * escalations concurrently collapses the AI stage to a single provider-timeout
+ * window, which keeps even a slow local Ollama/Groq demo responsive. Each
+ * escalation still runs both agents in parallel internally (runDualAgent).
  */
-const AI_CONCURRENCY = 1;
+const MAX_AI_PARALLEL = 4;
 
 /**
  * Default number of REVIEW cases sent to AI.
@@ -480,11 +481,6 @@ async function escalateReviews(
       maxEscalations
     );
 
-  const selectedSet =
-    new Set(
-      selectedIndices
-    );
-
   const aiEscalatedCount =
     selectedIndices.length;
 
@@ -507,21 +503,35 @@ async function escalateReviews(
   const grokLatencies: number[] = [];
   const totalAiLatencies: number[] = [];
 
-  const judged =
+  const aiStageStart = Date.now();
+  const parallelism = Math.max(
+    1,
+    Math.min(
+      MAX_AI_PARALLEL,
+      selectedIndices.length
+    )
+  );
+  console.error(
+    `[AI] escalateReviews START: ${decisions.length} decisions, ${selectedIndices.length} selected, parallelism=${parallelism}`
+  );
+
+  /**
+   * Only the selected REVIEW decisions are sent to AI. The remaining REVIEW
+   * decisions are tagged AI_SKIPPED without touching the concurrency pool, so
+   * the pool never serializes AI work behind trivial skipped returns and the
+   * AI stage wall-time equals a single provider-timeout window.
+   */
+  const selectedDecisions =
+    selectedIndices.map(
+      (index) => decisions[index]
+    );
+
+  const judgedSelected =
     await mapWithConcurrency(
-      decisions,
-      AI_CONCURRENCY,
-      async (
-        decision,
-        index
-      ) => {
-        if (
-          !selectedSet.has(
-            index
-          )
-        ) {
-          return { ...decision, aiStatus: "AI_SKIPPED" as const };
-        }
+      selectedDecisions,
+      parallelism,
+      async (decision) => {
+        const invStart = Date.now();
 
         const context =
           buildJudgeContext(
@@ -632,6 +642,27 @@ async function escalateReviews(
         return { ...result, aiStatus };
       }
     );
+
+  const judgedByIndex =
+    new Map<number, DecisionResult>();
+  selectedIndices.forEach(
+    (origIndex, pos) => {
+      judgedByIndex.set(
+        origIndex,
+        judgedSelected[pos]
+      );
+    }
+  );
+
+  const judged =
+    decisions.map((decision, index) =>
+      judgedByIndex.has(index)
+        ? judgedByIndex.get(index)!
+        : { ...decision, aiStatus: "AI_SKIPPED" as const }
+    );
+
+  const aiStageElapsed = Date.now() - aiStageStart;
+  console.error(`[AI] escalateReviews END: ${aiStageElapsed}ms total, ${aiEscalatedCount} investigations, ${aiSuccessCount} successes, ${aiFallbackCount} fallbacks`);
 
   return {
     decisions: judged,

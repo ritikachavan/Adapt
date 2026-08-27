@@ -20,6 +20,48 @@ const CORRECTION_TYPES = [
   "OTHER",
 ] as const;
 
+// Placeholder explanations that are too trivial to be meaningful
+const REJECTED_PLACEHOLDERS = [
+  "why wrong",
+  "duplicate",
+  "wrong",
+  "not correct",
+  "incorrect",
+  "fix",
+  "update",
+  "change",
+  "mistake",
+  "error",
+  "n/a",
+  "na",
+  "none",
+  "no",
+  "ok",
+  "okay",
+  "test",
+  "testing",
+  "asdf",
+  "qwerty",
+];
+
+const MIN_EXPLANATION_LENGTH = 10;
+
+function isMeaningfulExplanation(text: string): { valid: boolean; reason: string } {
+  const trimmed = text.trim();
+  if (trimmed.length < MIN_EXPLANATION_LENGTH) {
+    return { valid: false, reason: `Explanation must be at least ${MIN_EXPLANATION_LENGTH} characters.` };
+  }
+  const lower = trimmed.toLowerCase();
+  if (REJECTED_PLACEHOLDERS.includes(lower)) {
+    return { valid: false, reason: "Explanation is too generic. Please describe why the engine verdict is wrong for this case." };
+  }
+  // Check for repeated characters (e.g., "aaaaaaa")
+  if (/(.)\1{4,}/.test(lower)) {
+    return { valid: false, reason: "Explanation appears to be placeholder text. Please provide a substantive explanation." };
+  }
+  return { valid: true, reason: "" };
+}
+
 interface DecisionActionsProps {
   /** True when no case is selected in the queue. */
   disabled?: boolean;
@@ -48,7 +90,8 @@ export default function DecisionActions({
     CORRECTION_TYPES[0]
   );
 
-  const ready = !disabled && !submitting && explanation.trim().length >= 3;
+  const explanationCheck = isMeaningfulExplanation(explanation);
+  const ready = !disabled && !submitting && explanationCheck.valid;
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -96,10 +139,13 @@ export default function DecisionActions({
           rows={3}
           value={explanation}
           onChange={(e) => setExplanation(e.target.value)}
-          placeholder="Why is the engine verdict wrong for this case?"
+          placeholder="Why is the engine verdict wrong for this case? Describe the specific evidence or reasoning."
           className="mt-1 w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-100"
           disabled={submitting}
         />
+        {!explanationCheck.valid && explanation.trim().length > 0 && (
+          <p className="mt-1 text-[11px] text-rose-600">{explanationCheck.reason}</p>
+        )}
       </div>
 
       {error && (
@@ -125,7 +171,7 @@ export default function DecisionActions({
       </div>
       {!ready && !submitting && (
         <p className="text-[11px] text-slate-400">
-          Write a short explanation (min. 3 characters) to enable the actions.
+          Write a substantive explanation (min. {MIN_EXPLANATION_LENGTH} characters, no generic placeholders) to enable the actions.
         </p>
       )}
       </div>

@@ -154,6 +154,7 @@ export async function runDualAgent(
 ): Promise<DualAgentResult> {
   const { agent1, agent2 } = options;
   const tid = context.paymentId;
+  const dualStart = Date.now();
 
   // Run both agents in parallel — they never see each other's output
   const [rawVerdict1, rawVerdict2] = await Promise.all([
@@ -166,6 +167,8 @@ export async function runDualAgent(
       return createSafeFallback(tid);
     }),
   ]);
+
+  const dualElapsed = Date.now() - dualStart;
 
   // Normalize evidence to canonical format and resolve from source records
   const verdict1 = normalizeVerdict(rawVerdict1, context);
@@ -217,7 +220,7 @@ export async function runDualAgent(
     failureReason = null;
   }
 
-  console.error(`[DUAL-AGENT] transaction=${tid} status=${aiStatus} agent1=${verdict1.decision} agent2=${verdict2.decision} agreement=${agreement} evidenceValid=${bothValid}`);
+  console.error(`[DUAL-AGENT] transaction=${tid} status=${aiStatus} agent1=${verdict1.decision} agent2=${verdict2.decision} agreement=${agreement} evidenceValid=${bothValid} elapsed=${dualElapsed}ms`);
 
   return {
     transactionId: tid,

@@ -33,6 +33,8 @@ export default function AIPanel({
 }: AIPanelProps) {
   const isDual = dualAgentEnabled && grokProvider !== null;
   const fmt = (v: number | null | undefined) => v ?? 0;
+  const agreements = fmt(dualAgentAgreements);
+  const disagreements = fmt(dualAgentDisagreements);
 
   return (
     <section className={`rounded-xl border shadow-sm ${aiEnabled ? "border-violet-200 bg-violet-50/30" : "border-slate-200 bg-white"}`}>
@@ -83,9 +85,9 @@ export default function AIPanel({
           <p className="mt-3 text-xs text-slate-600">
             {isDual ? (
               <>
-                {(dualAgentAgreements ?? 0) > 0
-                  ? `Dual-agent agreement reached on ${dualAgentAgreements} case(s). Evidence validated. Recommendation available for human review.`
-                  : (dualAgentDisagreements ?? 0) > 0
+                {agreements > 0
+                  ? `${agreements} dual-agent agreement${agreements > 1 ? "s" : ""} in this run. Evidence validated. Recommendation available for human review.`
+                  : disagreements > 0
                     ? `AI produced valid analyses, but no recommendation satisfied the dual-agent agreement policy. Human review remains required.`
                     : `AI produced valid analyses. Cases remain with human review.`}
               </>
@@ -105,8 +107,8 @@ export default function AIPanel({
           {[
             { label: "AI Investigations", value: aiEscalatedCount, color: "text-indigo-700" },
             ...(isDual ? [
-              { label: "Agreements", value: fmt(dualAgentAgreements), color: "text-emerald-700" },
-              { label: "Disagreements", value: fmt(dualAgentDisagreements), color: "text-amber-700" },
+              { label: "Agreements", value: agreements, color: "text-emerald-700" },
+              { label: "Disagreements", value: disagreements, color: "text-amber-700" },
             ] : [
                             { label: "Valid Responses", value: ollamaSuccesses ?? aiSuccessCount, color: "text-emerald-700" },
             ]),
@@ -126,6 +128,10 @@ export default function AIPanel({
             </div>
           ))}
         </div>
+
+        <p className="mt-3 text-[11px] text-slate-400">
+          AI escalation is selectively bounded. Cases beyond the investigation budget remain REVIEW and are not automatically resolved.
+        </p>
 
         {aiFallbackCount > 0 && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-200">
