@@ -43,6 +43,16 @@ import {
   recommendResolution,
 } from "../../../lib/resolution/resolutionRecommendations";
 
+import {
+  runDualAgent,
+  isSafeFallback,
+  type DualAgentResult,
+} from "../../../lib/ai/dual-agent";
+
+import {
+  createGrokJudgeProvider,
+} from "../../../lib/ai/grok";
+
 export interface ReconciliationResponseSummary {
   total: number;
   matched: number;
@@ -60,6 +70,21 @@ export interface AiMetrics {
   aiSkippedCount: number;
   aiEnabled: boolean;
   aiProvider: string | null;
+  // Dual-agent metrics (null = not measured)
+  dualAgentEnabled: boolean;
+  grokProvider: string | null;
+  ollamaInvocations: number | null;
+  ollamaSuccesses: number | null;
+  grokInvocations: number | null;
+  grokSuccesses: number | null;
+  grokFailures: number | null;
+  dualAgentAgreements: number | null;
+  dualAgentDisagreements: number | null;
+  evidenceValidationPassed: number | null;
+  evidenceValidationFailed: number | null;
+  avgOllamaLatencyMs: number | null;
+  avgGrokLatencyMs: number | null;
+  totalAiLatencyMs: number | null;
 }
 
 export interface ReconciliationResponse {
@@ -73,6 +98,7 @@ export interface RunReconciliationOptions {
   dataDir?: string;
   ai?: boolean;
   maxEscalations?: number;
+  dualAgent?: boolean;
 }
 
 async function loadJsonArray(
@@ -407,16 +433,31 @@ interface EscalationOutcome {
   aiSuccessCount: number;
   aiFallbackCount: number;
   aiSkippedCount: number;
+  // Dual-agent instrumentation
+  ollamaInvocations: number;
+  ollamaSuccesses: number;
+  grokInvocations: number;
+  grokSuccesses: number;
+  grokFailures: number;
+  dualAgentAgreements: number;
+  dualAgentDisagreements: number;
+  evidenceValidationPassed: number;
+  evidenceValidationFailed: number;
+  ollamaLatencies: number[];
+  grokLatencies: number[];
+  totalAiLatencies: number[];
 }
 
 /**
  * Escalate only deterministic REVIEW decisions.
+ * Supports both single-agent and dual-agent modes.
  */
 async function escalateReviews(
   decisions: DecisionResult[],
   data: FinancialDataBundle,
   provider: AiJudgeProvider,
-  maxEscalations: number
+  maxEscalations: number,
+  dualAgentProvider?: AiJudgeProvider
 ): Promise<EscalationOutcome> {
   const reviewIndices: number[] =
     [];
@@ -457,6 +498,18 @@ async function escalateReviews(
 
   let aiSuccessCount = 0;
   let aiFallbackCount = 0;
+  let ollamaInvocations = 0;
+  let ollamaSuccesses = 0;
+  let grokInvocations = 0;
+  let grokSuccesses = 0;
+  let grokFailures = 0;
+  let dualAgentAgreements = 0;
+  let dualAgentDisagreements = 0;
+  let evidenceValidationPassed = 0;
+  let evidenceValidationFailed = 0;
+  const ollamaLatencies: number[] = [];
+  const grokLatencies: number[] = [];
+  const totalAiLatencies: number[] = [];
 
   const judged =
     await mapWithConcurrency(
@@ -489,49 +542,119 @@ async function escalateReviews(
           return { ...decision, aiStatus: "AI_FALLBACK" as const };
         }
 
+        console.error(`[AI] transaction=${decision.transactionId} dispatched dualAgent=${!!dualAgentProvider}`);
         let result: DecisionResult;
 
-        try {
-          result =
-            await provider.judge(
-              context
-            );
-        } catch {
-          aiFallbackCount += 1;
-          return {
-            ...createSafeFallback(
-              decision.transactionId
-            ),
-            aiStatus: "AI_FALLBACK" as const,
-          };
+        if (dualAgentProvider) {
+          // Dual-agent mode: run both agents in parallel
+          try {
+            const ollamaStart = performance.now();
+            const groqStart = performance.now();
+            const dualResult = await runDualAgent(context, data, {
+              agent1: provider,
+              agent2: dualAgentProvider,
+            });
+            const ollamaElapsed = performance.now() - ollamaStart;
+            const groqElapsed = performance.now() - groqStart;
+
+            // Collect per-agent metrics
+            ollamaInvocations += 1;
+            grokInvocations += 1;
+            ollamaLatencies.push(ollamaElapsed);
+            grokLatencies.push(groqElapsed);
+            totalAiLatencies.push(Math.max(ollamaElapsed, groqElapsed));
+
+            if (!isSafeFallback(dualResult.agent1Verdict)) ollamaSuccesses += 1;
+            if (!isSafeFallback(dualResult.agent2Verdict)) grokSuccesses += 1;
+            else grokFailures += 1;
+
+            if (dualResult.evidenceValid) evidenceValidationPassed += 1;
+            else evidenceValidationFailed += 1;
+
+            if (dualResult.aiStatus === "SUCCESS") {
+              dualAgentAgreements += 1;
+              aiSuccessCount += 1;
+            } else {
+              if (dualResult.aiStatus === "DISAGREEMENT") dualAgentDisagreements += 1;
+              aiFallbackCount += 1;
+            }
+
+            result = {
+              ...dualResult.finalRecommendation,
+              transactionId: decision.transactionId,
+              dualAgent: {
+                mode: "DUAL_AGENT",
+                ollamaDecision: dualResult.agent1Verdict.decision,
+                ollamaConfidence: dualResult.agent1Verdict.confidence,
+                groqDecision: dualResult.agent2Verdict.decision,
+                groqConfidence: dualResult.agent2Verdict.confidence,
+                evidenceValidationPassed: dualResult.evidenceValid,
+                evidenceValidationErrors: [
+                  ...dualResult.agent1Validation.errors.map((e) => `${e.field}: ${e.claim}`),
+                  ...dualResult.agent2Validation.errors.map((e) => `${e.field}: ${e.claim}`),
+                ],
+                adjudication: dualResult.aiStatus === "SUCCESS" ? "AGREED"
+                  : dualResult.aiStatus === "DISAGREEMENT" ? "DISAGREED"
+                  : dualResult.aiStatus === "INVALID_EVIDENCE" ? "EVIDENCE_FAILED"
+                  : dualResult.aiStatus === "UNAVAILABLE" ? "PROVIDER_UNAVAILABLE"
+                  : "FALLBACK",
+              },
+            };
+          } catch {
+            aiFallbackCount += 1;
+            grokFailures += 1;
+            result = {
+              ...createSafeFallback(decision.transactionId),
+              reason: "Dual-agent execution failed; human review required.",
+            };
+          }
+        } else {
+          // Single-agent mode (existing behavior)
+          try {
+            result = await provider.judge(context);
+          } catch {
+            aiFallbackCount += 1;
+            return {
+              ...createSafeFallback(decision.transactionId),
+              aiStatus: "AI_FALLBACK" as const,
+            };
+          }
+          if (result.reason === SAFE_FALLBACK_REASON) {
+            aiFallbackCount += 1;
+            return { ...result, aiStatus: "AI_FALLBACK" as const };
+          } else {
+            aiSuccessCount += 1;
+            return { ...result, aiStatus: "AI_SUCCESS" as const };
+          }
         }
 
-        if (
-          result.reason ===
-          SAFE_FALLBACK_REASON
-        ) {
-          aiFallbackCount += 1;
-          return { ...result, aiStatus: "AI_FALLBACK" as const };
-        } else {
-          aiSuccessCount += 1;
-          return { ...result, aiStatus: "AI_SUCCESS" as const };
-        }
+        const aiStatus = result.reason === SAFE_FALLBACK_REASON || result.reason.includes("human review required")
+          ? "AI_FALLBACK" as const
+          : "AI_SUCCESS" as const;
+
+        return { ...result, aiStatus };
       }
     );
 
   return {
-    decisions:
-      judged,
-
+    decisions: judged,
     deterministicReviewCount,
-
     aiEscalatedCount,
-
     aiSuccessCount,
-
     aiFallbackCount,
-
     aiSkippedCount,
+    ollamaInvocations,
+    ollamaSuccesses,
+    grokInvocations,
+    grokSuccesses,
+    grokFailures,
+    dualAgentAgreements,
+    dualAgentDisagreements,
+    evidenceValidationPassed,
+    evidenceValidationFailed,
+    ollamaLatencies,
+    grokLatencies,
+    totalAiLatencies,
   };
 }
 
@@ -579,6 +702,20 @@ export async function runReconciliation(
         )
       : null;
 
+  // Create Groq provider for dual-agent mode
+  let dualAgentProvider: AiJudgeProvider | undefined;
+  if (wantsAi && options.dualAgent) {
+    const groqApiKey = process.env.GROQ_API_KEY ?? "";
+    if (groqApiKey) {
+      dualAgentProvider = createGrokJudgeProvider({
+        apiKey: groqApiKey,
+        model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+        baseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
+        timeoutMs: Number(process.env.GROQ_TIMEOUT_MS) || 30_000,
+      });
+    }
+  }
+
   /**
    * Determine if the AI provider is available
    * regardless of whether this run uses it.
@@ -601,38 +738,27 @@ export async function runReconciliation(
       options.maxEscalations
     );
 
-  let decisions =
-    report.decisions;
-
+  let decisions = report.decisions;
   let aiEscalatedCount = 0;
   let aiSuccessCount = 0;
   let aiFallbackCount = 0;
-  let aiSkippedCount =
-    deterministicReviewCount;
+  let aiSkippedCount = deterministicReviewCount;
+  let outcome: EscalationOutcome | null = null;
 
   if (provider) {
-    const outcome =
-      await escalateReviews(
-        report.decisions,
-        data,
-        provider,
-        maxEscalations
-      );
+    outcome = await escalateReviews(
+      report.decisions,
+      data,
+      provider,
+      maxEscalations,
+      dualAgentProvider
+    );
 
-    decisions =
-      outcome.decisions;
-
-    aiEscalatedCount =
-      outcome.aiEscalatedCount;
-
-    aiSuccessCount =
-      outcome.aiSuccessCount;
-
-    aiFallbackCount =
-      outcome.aiFallbackCount;
-
-    aiSkippedCount =
-      outcome.aiSkippedCount;
+    decisions = outcome.decisions;
+    aiEscalatedCount = outcome.aiEscalatedCount;
+    aiSuccessCount = outcome.aiSuccessCount;
+    aiFallbackCount = outcome.aiFallbackCount;
+    aiSkippedCount = outcome.aiSkippedCount;
   } else {
     // AI not requested: tag all REVIEW decisions
     decisions = decisions.map((d) =>
@@ -705,21 +831,32 @@ export async function runReconciliation(
 
     aiMetrics: {
       deterministicReviewCount,
-
       aiEscalatedCount,
-
       aiSuccessCount,
-
       aiFallbackCount,
-
       aiSkippedCount,
-
-      aiEnabled:
-        aiAvailable,
-
-      aiProvider:
-        aiProviderName ??
-        null,
+      aiEnabled: aiAvailable,
+      aiProvider: aiProviderName ?? null,
+      dualAgentEnabled: !!dualAgentProvider,
+      grokProvider: dualAgentProvider?.name ?? null,
+      ollamaInvocations: outcome?.ollamaInvocations ?? null,
+      ollamaSuccesses: outcome?.ollamaSuccesses ?? null,
+      grokInvocations: outcome?.grokInvocations ?? null,
+      grokSuccesses: outcome?.grokSuccesses ?? null,
+      grokFailures: outcome?.grokFailures ?? null,
+      dualAgentAgreements: outcome?.dualAgentAgreements ?? null,
+      dualAgentDisagreements: outcome?.dualAgentDisagreements ?? null,
+      evidenceValidationPassed: outcome?.evidenceValidationPassed ?? null,
+      evidenceValidationFailed: outcome?.evidenceValidationFailed ?? null,
+      avgOllamaLatencyMs: outcome?.ollamaLatencies.length
+        ? Math.round(outcome.ollamaLatencies.reduce((a, b) => a + b, 0) / outcome.ollamaLatencies.length)
+        : null,
+      avgGrokLatencyMs: outcome?.grokLatencies.length
+        ? Math.round(outcome.grokLatencies.reduce((a, b) => a + b, 0) / outcome.grokLatencies.length)
+        : null,
+      totalAiLatencyMs: outcome?.totalAiLatencies.length
+        ? Math.round(outcome.totalAiLatencies.reduce((a, b) => a + b, 0) / outcome.totalAiLatencies.length)
+        : null,
     },
   };
 }
@@ -749,6 +886,7 @@ export async function POST(
   request: Request
 ): Promise<Response> {
   let wantAi = false;
+  let wantDualAgent = false;
 
   let maxEscalations:
     number | undefined;
@@ -764,6 +902,7 @@ export async function POST(
         JSON.parse(text) as {
           ai?: unknown;
           maxEscalations?: unknown;
+          dualAgent?: unknown;
         };
 
       if (
@@ -785,6 +924,9 @@ export async function POST(
 
       wantAi =
         parsed.ai === true;
+
+      wantDualAgent =
+        parsed.dualAgent === true;
 
       if (
         typeof parsed.maxEscalations ===
@@ -832,6 +974,7 @@ export async function POST(
           wantAi,
 
         maxEscalations,
+        dualAgent: wantDualAgent,
       });
 
     if (!wantAi) {

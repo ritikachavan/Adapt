@@ -30,8 +30,9 @@ const VALID_DECISIONS: readonly ReconciliationDecision[] = [
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:11434";
 const DEFAULT_MODEL = "qwen2.5:1.5b";
-const DEFAULT_TIMEOUT_MS = 45_000;
-const NUM_PREDICT = 200;
+const DEFAULT_TIMEOUT_MS = 120_000;
+const NUM_PREDICT = 512;
+const SEED = 42;
 
 export interface OllamaRequestInit {
   method: string;
@@ -147,24 +148,14 @@ function buildJudgePrompt(
   };
 
   return [
-    "You are a financial reconciliation judge.",
-    "Use ONLY the supplied CASE DATA.",
-    "You are not authorized to invent records or IDs.",
-    "Similarity alone is insufficient for approval.",
-    "Prefer REVIEW over an unsupported MATCHED decision.",
-    "matchedRecordId must be null unless selecting an exact candidate ID.",
-    "Return ONLY one valid JSON object.",
-    "Do not use markdown or code fences.",
-    "Keep reason under 10 words.",
+    "Financial reconciliation judge. Use ONLY supplied data. Never invent IDs or amounts.",
     "",
-    "Required JSON:",
-    '{"decision":"REVIEW","confidence":0.3,"matchedRecordId":null,"reason":"Multiple similar records found, exact match unclear","evidence":[{"field":"settlement.total","value":249}]}',
+    "REVIEW escalation = engine could not auto-resolve. Evaluate independently; do NOT default to REVIEW.",
+    "RULES: 1 candidate with matching paymentId+amount=MATCHED. 0 candidates=MISSING. Refund exists=REFUNDED. Ambiguous/contradictory=REVIEW. Amount differs=MISMATCH.",
     "",
-    "Allowed decisions: MATCHED, REVIEW, MISMATCH, MISSING, REFUNDED.",
-    "confidence: 0..1, evidence: 0..3 items.",
-    "Set confidence based on how certain you are. Use 0 only if you have no information.",
+    "Return ONLY JSON: {\"decision\":\"MATCHED|REVIEW|MISMATCH|MISSING|REFUNDED\",\"confidence\":0.0-1.0,\"matchedRecordId\":\"stl_xxx|null\",\"reason\":\"<10 words\",\"evidence\":[]}",
     "",
-    "CASE DATA:",
+    "DATA:",
     JSON.stringify(caseData),
   ].join("\n");
 }
@@ -423,6 +414,7 @@ export function createOllamaJudgeProvider(
               options: {
                 temperature: 0,
                 num_predict: NUM_PREDICT,
+                seed: SEED,
               },
             }),
 
@@ -494,6 +486,8 @@ export function createOllamaJudgeProvider(
     async judge(
       context: JudgeCandidateContext
     ): Promise<DecisionResult> {
+      const start = Date.now();
+      console.error(`[OLLAMA] transaction=${context.paymentId} started model=${model}`);
       try {
         const prompt =
           buildJudgePrompt(context);
@@ -506,6 +500,9 @@ export function createOllamaJudgeProvider(
             raw,
             context.candidateRecordIds
           );
+
+        const elapsed = Date.now() - start;
+        console.error(`[OLLAMA] transaction=${context.paymentId} completed in ${elapsed}ms decision=${verdict.decision} confidence=${verdict.confidence}`);
 
         return {
           transactionId:
@@ -529,6 +526,7 @@ export function createOllamaJudgeProvider(
           source: "OLLAMA",
         };
       } catch (error) {
+        const elapsed = Date.now() - start;
         const errorName =
           error instanceof Error
             ? error.name
@@ -552,6 +550,8 @@ export function createOllamaJudgeProvider(
 
             timeoutMs,
 
+            elapsedMs: elapsed,
+
             errorName,
 
             errorMessage,
@@ -559,7 +559,8 @@ export function createOllamaJudgeProvider(
         );
 
         return createSafeFallback(
-          context.paymentId
+          context.paymentId,
+          "OLLAMA"
         );
       }
     },

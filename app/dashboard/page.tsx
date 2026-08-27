@@ -11,6 +11,7 @@ import type { ReviewItem } from "@/components/dashboard/DashboardReviewQueue";
 import AIPanel from "@/components/dashboard/AIPanel";
 import AuditIntelligence from "@/components/dashboard/AuditIntelligence";
 import ArchitectureIntelligencePanel from "@/components/dashboard/ArchitectureIntelligencePanel";
+import WhyAdaptPanel from "@/components/dashboard/WhyAdaptPanel";
 import ReconciliationOutcomeChart from "@/components/dashboard/ReconciliationOutcomeChart";
 import ReconciliationPipeline from "@/components/dashboard/ReconciliationPipeline";
 import type { PipelineStatus, PipelineData } from "@/components/dashboard/ReconciliationPipeline";
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [drawerData, setDrawerData] = useState<DrawerDecision | null>(null);
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>("IDLE");
   const [tableFilter, setTableFilter] = useState<string | null>(null);
+  const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
   const initRef = useRef(false);
 
   // One-time init: try to restore from server. Runs exactly once per session.
@@ -32,6 +34,12 @@ export default function DashboardPage() {
     if (initRef.current) return;
     initRef.current = true;
     if (data) return;
+
+    // Fetch AI config (secret-free booleans) once on mount.
+    fetch("/api/ai-config")
+      .then((res) => res.ok ? res.json() : null)
+      .then((cfg) => { if (cfg) setGroqConfigured(Boolean(cfg.groqConfigured)); })
+      .catch(() => { /* config unavailable — leave null */ });
 
     fetch("/api/reconcile")
       .then((res) => {
@@ -52,9 +60,16 @@ export default function DashboardPage() {
 
   const run = useCallback(async (withAI: boolean) => {
     setStatus("LOADING"); setError(null); setAiMode(withAI);
-    setPipelineStatus(withAI ? "AI_PROCESSING" : "PROCESSING");
+    // Clear stale data so the dashboard does not show previous run's metrics
+    // while the new request is in flight.
+    setData(null);
+    // Deterministic reconciliation and AI verification run inside ONE
+    // request/response cycle; the client cannot observe internal phase
+    // transitions, so claiming "AI running" up front would be fabrication.
+    // A single honest PROCESSING state covers the whole request.
+    setPipelineStatus("PROCESSING");
     try {
-      const body = withAI ? { ai: true, maxEscalations: 4 } : {};
+      const body = withAI ? { ai: true, maxEscalations: 4, dualAgent: true } : {};
       const res = await fetch("/api/reconcile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       setData((await res.json()) as ReconciliationResult);
@@ -116,15 +131,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-end mb-2"><AskAdapt /></div>
-      <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={status === "LOADING"} aiMode={aiMode} hasData={true} aiProvider={data.aiMetrics.aiProvider} aiSuccessCount={data.aiMetrics.aiSuccessCount} />
+      <HeroHeader onRunDeterministic={() => void run(false)} onRunAI={() => void run(true)} loading={status === "LOADING"} aiMode={aiMode} hasData={true} aiProvider={data.aiMetrics.aiProvider} aiSuccessCount={data.aiMetrics.aiSuccessCount} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} />
       <ReconciliationPipeline status={pipelineStatus} data={pipelineData} aiMode={aiMode} onStageClick={handleStageClick} />
       <KPICards summary={data.summary} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} />
       <ReconciliationOutcomeChart summary={data.summary} />
       <AuditIntelligence summary={data.summary} aiMetrics={data.aiMetrics} decisions={data.decisions} />
-      <ArchitectureIntelligencePanel aiMetrics={data.aiMetrics} />
+      <ArchitectureIntelligencePanel aiMetrics={data.aiMetrics} groqConfigured={groqConfigured} />
+      <WhyAdaptPanel />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2"><HealthScore summary={data.summary} /></div>
-        <AIPanel aiEnabled={data.aiMetrics.aiEnabled} aiProvider={data.aiMetrics.aiProvider} deterministicReviewCount={data.aiMetrics.deterministicReviewCount} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} aiSuccessCount={data.aiMetrics.aiSuccessCount} aiFallbackCount={data.aiMetrics.aiFallbackCount} aiSkippedCount={data.aiMetrics.aiSkippedCount} />
+        <AIPanel aiEnabled={data.aiMetrics.aiEnabled} aiProvider={data.aiMetrics.aiProvider} deterministicReviewCount={data.aiMetrics.deterministicReviewCount} aiEscalatedCount={data.aiMetrics.aiEscalatedCount} aiSuccessCount={data.aiMetrics.aiSuccessCount} aiFallbackCount={data.aiMetrics.aiFallbackCount} aiSkippedCount={data.aiMetrics.aiSkippedCount} dualAgentEnabled={data.aiMetrics.dualAgentEnabled} grokProvider={data.aiMetrics.grokProvider} ollamaSuccesses={data.aiMetrics.ollamaSuccesses} grokSuccesses={data.aiMetrics.grokSuccesses} grokFailures={data.aiMetrics.grokFailures} dualAgentAgreements={data.aiMetrics.dualAgentAgreements} dualAgentDisagreements={data.aiMetrics.dualAgentDisagreements} />
       </div>
       <DashboardReviewQueue decisions={data.decisions} onItemClick={openDrawer} />
       <div id="transaction-table"><TransactionTable decisions={data.decisions} onRowClick={openDrawer} activeFilter={tableFilter} onFilterApplied={handleFilterApplied} /></div>

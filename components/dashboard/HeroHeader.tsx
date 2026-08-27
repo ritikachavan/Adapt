@@ -6,8 +6,9 @@ interface HeroHeaderProps {
   loading: boolean;
   aiMode: boolean;
   hasData: boolean;
-  aiProvider?: string | null;
+    aiProvider?: string | null;
   aiSuccessCount?: number;
+  aiEscalatedCount?: number;
 }
 
 export default function HeroHeader({
@@ -17,7 +18,8 @@ export default function HeroHeader({
   aiMode,
   hasData,
   aiProvider,
-  aiSuccessCount,
+    aiSuccessCount,
+  aiEscalatedCount,
 }: HeroHeaderProps) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
@@ -47,9 +49,9 @@ export default function HeroHeader({
                   {aiProvider}
                 </span>
               )}
-              {aiMode && aiSuccessCount !== undefined && aiSuccessCount > 0 && (
+                            {aiMode && aiEscalatedCount !== undefined && aiEscalatedCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                  {aiSuccessCount} AI decision{aiSuccessCount > 1 ? "s" : ""}
+                  {aiEscalatedCount} AI investigation{aiEscalatedCount > 1 ? "s" : ""}
                 </span>
               )}
             </div>

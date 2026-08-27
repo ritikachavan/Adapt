@@ -117,8 +117,8 @@ export default function ReviewPage() {
             Human review
           </h1>
           <p className="text-sm text-slate-500">
-            Ambiguous cases escalated by the deterministic engine. Your
-            corrections become learned patterns.
+            Ambiguous cases flagged by the deterministic engine. Your
+            corrections are recorded and surfaced for future reference.
           </p>
         </div>
         <button

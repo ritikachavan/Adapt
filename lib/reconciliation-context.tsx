@@ -11,6 +11,19 @@ interface AiMetrics {
   aiSkippedCount: number;
   aiEnabled: boolean;
   aiProvider: string | null;
+  dualAgentEnabled: boolean;
+  grokProvider: string | null;
+  ollamaInvocations: number | null;
+  ollamaSuccesses: number | null;
+  grokInvocations: number | null;
+  grokSuccesses: number | null;
+  grokFailures: number | null;
+  dualAgentAgreements: number | null;
+  dualAgentDisagreements: number | null;
+  evidenceValidationPassed: number | null;
+  evidenceValidationFailed: number | null;
+  avgOllamaLatencyMs: number | null;
+  avgGrokLatencyMs: number | null;
 }
 
 export interface ReconciliationResult {

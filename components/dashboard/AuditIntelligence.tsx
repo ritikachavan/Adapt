@@ -8,6 +8,10 @@ interface AiMetrics {
   aiSkippedCount: number;
   aiEnabled: boolean;
   aiProvider: string | null;
+  dualAgentEnabled: boolean;
+  grokProvider: string | null;
+  dualAgentAgreements: number | null;
+  dualAgentDisagreements: number | null;
 }
 
 interface Decision {
@@ -39,7 +43,7 @@ interface Props {
  * - REFUNDED: exposure = 0 (refund lifecycle is expected behavior)
  */
 function calcExposure(decisions: Decision[]): { total: number; byType: Record<string, number> } {
-  const byType: Record<string, number> = { REVIEW: 0, MISMATCH: 0, MISSING: 0, REFUNDED: 0 };
+  const byType: Record<string, number> = { "Review Required": 0, Mismatch: 0, Missing: 0, Refunded: 0 };
   for (const d of decisions) {
     if (d.decision === "MATCHED") continue;
     const stl = d.evidence.find((e) => e.field === "settlement.total" && typeof e.expected === "number");
@@ -47,14 +51,14 @@ function calcExposure(decisions: Decision[]): { total: number; byType: Record<st
     const expected = stl.expected as number;
     if (d.decision === "MISMATCH") {
       const actual = typeof stl.actual === "number" ? stl.actual : expected;
-      byType.MISMATCH += Math.abs(expected - actual);
+      byType.Mismatch += Math.abs(expected - actual);
     } else if (d.decision === "MISSING") {
-      byType.MISSING += expected;
+      byType.Missing += expected;
     } else if (d.decision === "REVIEW") {
-      byType.REVIEW += expected;
+      byType["Review Required"] += expected;
     }
   }
-  return { total: byType.REVIEW + byType.MISMATCH + byType.MISSING + byType.REFUNDED, byType };
+  return { total: byType["Review Required"] + byType.Mismatch + byType.Missing + byType.Refunded, byType };
 }
 
 function generateSignals(summary: ReconciliationSummary, ai: AiMetrics): string[] {
@@ -70,7 +74,22 @@ function generateSignals(summary: ReconciliationSummary, ai: AiMetrics): string[
   if (mismatchRate > 0.05) signals.push("Elevated mismatch rate \u2014 investigate settlement discrepancies.");
   if (summary.missing > 3) signals.push(`${summary.missing} missing settlements \u2014 potential settlement pipeline issue.`);
   if (ai.aiFallbackCount > 0) signals.push(`${ai.aiFallbackCount} AI fallback(s) occurred \u2014 AI could not reach a verdict.`);
-  if (ai.aiEnabled && ai.aiSuccessCount > 0) signals.push(`AI successfully resolved ${ai.aiSuccessCount} ambiguous case(s).`);
+  if (ai.aiEnabled && ai.aiEscalatedCount > 0) {
+    const isDual = ai.dualAgentEnabled && ai.grokProvider !== null;
+    const agreements = ai.dualAgentAgreements ?? 0;
+    const disagreements = ai.dualAgentDisagreements ?? 0;
+    if (isDual) {
+      if (agreements > 0) {
+        signals.push(`AI investigated ${ai.aiEscalatedCount} case(s); ${agreements} reached dual-agent agreement.`);
+      } else if (disagreements > 0) {
+        signals.push(`AI investigated ${ai.aiEscalatedCount} case(s); ${disagreements} disagreement(s) — all require human review.`);
+      } else {
+        signals.push(`AI investigated ${ai.aiEscalatedCount} case(s). No agreements or disagreements recorded.`);
+      }
+    } else {
+      signals.push(`AI investigated ${ai.aiEscalatedCount} case(s) using the available AI provider.`);
+    }
+  }
   if (signals.length === 0) signals.push("Reconciliation operating within normal parameters.");
   return signals;
 }
@@ -81,13 +100,21 @@ function buildSummary(s: ReconciliationSummary, ai: AiMetrics): string[] {
   const matchPct = Math.round((s.matched / total) * 100);
   const reviewPct = Math.round((s.reviewed / total) * 100);
   const lines: string[] = [];
-  lines.push(`Reconciled ${total} transactions with a ${matchPct}% automatic match rate.`);
+  lines.push(`Reconciled ${total} transactions: ${matchPct}% deterministically auto-reconciled, ${total - s.matched} classified into differentiated outcomes.`);
   if (s.reviewed > 0) lines.push(`${s.reviewed} cases (${reviewPct}%) require human review due to ambiguity.`);
   if (s.mismatched > 0) lines.push(`${s.mismatched} amount mismatches and ${s.missing} missing settlements detected.`);
   if (ai.aiEnabled && ai.aiEscalatedCount > 0) {
-    lines.push(`AI judge evaluated ${ai.aiEscalatedCount} case(s) with ${ai.aiSuccessCount} successful verdict(s).`);
+    const isDual = ai.dualAgentEnabled && ai.grokProvider !== null;
+    const agreements = ai.dualAgentAgreements ?? 0;
+    if (isDual && agreements > 0) {
+      lines.push(`AI evaluated ${ai.aiEscalatedCount} case(s); ${agreements} reached dual-agent agreement after evidence validation.`);
+    } else if (isDual) {
+      lines.push(`AI evaluated ${ai.aiEscalatedCount} case(s) through dual-agent verification. No agreements reached — all require human review.`);
+    } else {
+      lines.push(`AI evaluated ${ai.aiEscalatedCount} case(s) using the available AI provider.`);
+    }
   } else if (s.reviewed > 0) {
-    lines.push(`All ${s.reviewed} review cases are pending \u2014 AI judge was not invoked.`);
+    lines.push(`All ${s.reviewed} review-required cases are pending \u2014 AI judge was not invoked.`);
   }
   return lines;
 }
@@ -149,10 +176,10 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
   const topAction = Object.entries(actionCounts).sort((a, b) => b[1] - a[1])[0];
 
   const exceptions = [
-    { label: "REVIEW", count: summary.reviewed, pct: pct(summary.reviewed), color: "bg-amber-500", text: "text-amber-700" },
-    { label: "MISMATCH", count: summary.mismatched, pct: pct(summary.mismatched), color: "bg-rose-500", text: "text-rose-700" },
-    { label: "MISSING", count: summary.missing, pct: pct(summary.missing), color: "bg-orange-400", text: "text-orange-700" },
-    { label: "REFUNDED", count: summary.refunded, pct: pct(summary.refunded), color: "bg-sky-500", text: "text-sky-700" },
+    { label: "Review Required", count: summary.reviewed, pct: pct(summary.reviewed), color: "bg-amber-500", text: "text-amber-700" },
+    { label: "Mismatch", count: summary.mismatched, pct: pct(summary.mismatched), color: "bg-rose-500", text: "text-rose-700" },
+    { label: "Missing", count: summary.missing, pct: pct(summary.missing), color: "bg-orange-400", text: "text-orange-700" },
+    { label: "Refunded", count: summary.refunded, pct: pct(summary.refunded), color: "bg-sky-500", text: "text-sky-700" },
   ];
 
   return (
@@ -174,8 +201,8 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
         {/* Two-column: Exposure + Exception Breakdown */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="rounded-lg border border-slate-200 p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Exception Exposure</h3>
-            <p className="mt-1 text-[11px] text-slate-400">Monetary value in exception categories (INR)</p>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Financial Exposure Requiring Investigation</h3>
+            <p className="mt-1 text-[11px] text-slate-400">MISMATCH = absolute expected-vs-actual difference. MISSING/REVIEW REQUIRED = expected amount. REFUNDED excluded.</p>
             <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{'\u20B9'}{exposure.total.toLocaleString()}</p>
             <div className="mt-3 space-y-2">
               {Object.entries(exposure.byType).filter(([, v]) => v > 0).map(([key, val]) => (
@@ -186,7 +213,7 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
               ))}
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-              Calculated from settlement.total evidence: MISMATCH uses |expected \u2212 actual|, MISSING/REVIEW use expected amount. REFUNDED excluded.
+              Calculated from settlement.total evidence: MISMATCH uses |expected \u2212 actual|, MISSING/REVIEW REQUIRED use expected amount. REFUNDED excluded.
             </p>
           </div>
 
@@ -235,8 +262,8 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
         {/* Anomaly Intelligence */}
         <div className="rounded-lg border border-slate-200 p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Anomaly Intelligence</h3>
-            <span className="text-xs font-semibold tabular-nums text-slate-600">{anomalyRate}% anomaly rate</span>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Anomaly Signals</h3>
+            <span className="text-xs font-semibold tabular-nums text-slate-600">{anomalyDist.total} / {total} records with anomaly signals</span>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[{ label: "HIGH", count: anomalyDist.high, color: "text-rose-700", bg: "bg-rose-50" },
@@ -251,6 +278,8 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
           {topAnomalyType && (
             <p className="mt-2 text-[11px] text-slate-600">Most common: <span className="font-semibold">{topAnomalyType[0].replace(/_/g, " ")}</span> ({topAnomalyType[1]})</p>
           )}
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-400">Anomaly severity measures unusual evidence patterns independently of investigation urgency. LOW means a signal was detected but combined severity is below the MEDIUM threshold.</p>
+
           {anomalyDist.total === 0 && (
             <p className="mt-2 text-[11px] text-emerald-700">No significant anomalies detected.</p>
           )}
@@ -258,8 +287,8 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
 
         {/* Resolution Priorities */}
         <div className="rounded-lg border border-slate-200 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resolution Priorities</h3>
-          <p className="mt-1 text-[11px] text-slate-400">Investigation priority distribution</p>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Investigation Priority</h3>
+          <p className="mt-1 text-[11px] text-slate-400">Ranks how urgently a human should investigate a case.</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[{ label: "HIGH", count: resolutionDist.high, color: "text-rose-700", bg: "bg-rose-50" },
               { label: "MEDIUM", count: resolutionDist.medium, color: "text-amber-700", bg: "bg-amber-50" },
@@ -288,10 +317,10 @@ export default function AuditIntelligence({ summary, aiMetrics, decisions }: Pro
               <p className="mt-2 text-xs text-slate-600">Provider: <span className="font-mono font-semibold text-violet-700">{aiMetrics.aiProvider}</span></p>
             )}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              {[{ l: "Escalated", v: aiMetrics.aiEscalatedCount, c: "text-indigo-700" },
-                { l: "Success", v: aiMetrics.aiSuccessCount, c: "text-emerald-700" },
+              {[{ l: "Investigations", v: aiMetrics.aiEscalatedCount, c: "text-indigo-700" },
+                { l: "Investigated", v: aiMetrics.aiSuccessCount, c: "text-emerald-700" },
                 { l: "Fallback", v: aiMetrics.aiFallbackCount, c: "text-amber-700" },
-                { l: "Skipped", v: aiMetrics.aiSkippedCount, c: "text-slate-600" }].map((m) => (
+                { l: "Not Invoked", v: aiMetrics.aiSkippedCount, c: "text-slate-600" }].map((m) => (
                 <div key={m.l} className="rounded-md bg-slate-50 px-2.5 py-1.5">
                   <p className="text-[10px] font-medium text-slate-500">{m.l}</p>
                   <p className={`text-sm font-bold tabular-nums ${m.c}`}>{m.v}</p>

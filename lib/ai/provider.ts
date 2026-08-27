@@ -4,7 +4,7 @@
  * directly, so the local model stays swappable without touching logic.
  * Policy: LOCAL AI ONLY — implementations must never call paid/external APIs.
  */
-import type { DecisionResult } from "../types";
+import type { DecisionResult, DecisionSource } from "../types";
 
 /** Compact, serialisable fact handed to the model. */
 export interface JudgeEvidenceItem {
@@ -44,8 +44,10 @@ export const SAFE_FALLBACK_REASON =
 /**
  * Mandatory safe fallback. Never silently approve a transaction because
  * the AI failed — always return REVIEW with confidence 0.
+ * Optional source parameter: providers pass their own identity (OLLAMA/GROQ),
+ * orchestrator-level fallbacks use the default FALLBACK.
  */
-export function createSafeFallback(transactionId: string): DecisionResult {
+export function createSafeFallback(transactionId: string, source: DecisionSource = "FALLBACK"): DecisionResult {
   return {
     transactionId,
     decision: "REVIEW",
@@ -53,6 +55,6 @@ export function createSafeFallback(transactionId: string): DecisionResult {
     reason: SAFE_FALLBACK_REASON,
     evidence: [],
     matchedRecordId: null,
-    source: "OLLAMA",
+    source,
   };
 }

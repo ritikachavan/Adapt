@@ -9,18 +9,32 @@ interface AiMetrics {
   aiSuccessCount: number;
   aiFallbackCount: number;
   aiSkippedCount: number;
+  dualAgentEnabled: boolean;
+  grokProvider: string | null;
+  ollamaInvocations: number | null;
+  ollamaSuccesses: number | null;
+  grokInvocations: number | null;
+  grokSuccesses: number | null;
+  grokFailures: number | null;
+  dualAgentAgreements: number | null;
+  dualAgentDisagreements: number | null;
+  evidenceValidationPassed: number | null;
+  evidenceValidationFailed: number | null;
+  avgOllamaLatencyMs: number | null;
+  avgGrokLatencyMs: number | null;
 }
 
 interface Props {
   aiMetrics: AiMetrics;
+  groqConfigured?: boolean | null;
 }
 
 const PIPELINE = [
-  { tag: "DETERMINISTIC", tagColor: "bg-slate-100 text-slate-600", title: "Reconciliation", desc: "Establishes the reconciliation result from transaction and settlement records." },
-  { tag: "DETERMINISTIC", tagColor: "bg-slate-100 text-slate-600", title: "Risk + Anomaly Intelligence", desc: "Scores investigation urgency and identifies unusual evidence patterns." },
-  { tag: "AI", tagColor: "bg-violet-100 text-violet-700", title: "AI Judge", desc: "Provides structured reasoning for ambiguous reconciliation cases." },
+  { tag: "DETERMINISTIC", tagColor: "bg-slate-100 text-slate-600", title: "Reconciliation", desc: "Matches transactions to settlement evidence using fixed financial rules." },
+  { tag: "DETERMINISTIC", tagColor: "bg-slate-100 text-slate-600", title: "Intelligence", desc: "Detects unusual patterns and ranks investigation urgency." },
+  { tag: "AI", tagColor: "bg-violet-100 text-violet-700", title: "AI Verification", desc: "Two independent AI analysts investigate ambiguous cases. Their evidence is checked before any recommendation is shown." },
   { tag: "AGENT", tagColor: "bg-indigo-100 text-indigo-700", title: "Investigation Agent", desc: "Searches actual records, compares evidence, assesses uncertainty, and recommends next steps." },
-  { tag: "HUMAN", tagColor: "bg-emerald-100 text-emerald-700", title: "Human Authority", desc: "Final financial decisions remain with the human reviewer." },
+  { tag: "HUMAN", tagColor: "bg-emerald-100 text-emerald-700", title: "Human Decision", desc: "Final financial authority remains with the reviewer." },
 ] as const;
 
 const RISK_FACTORS = [
@@ -33,7 +47,7 @@ const RISK_FACTORS = [
   { weight: 5, label: "AI fallback", desc: "AI judge fell back to safe REVIEW" },
 ] as const;
 
-export default function ArchitectureIntelligencePanel({ aiMetrics }: Props) {
+export default function ArchitectureIntelligencePanel({ aiMetrics, groqConfigured }: Props) {
   const [openRisk, setOpenRisk] = useState(false);
   const [openAnomaly, setOpenAnomaly] = useState(false);
   return (
@@ -46,7 +60,7 @@ export default function ArchitectureIntelligencePanel({ aiMetrics }: Props) {
         <PipelineView />
         <RiskSection open={openRisk} onToggle={setOpenRisk} />
         <AnomalySection open={openAnomaly} onToggle={setOpenAnomaly} />
-        <AIRoutingSection aiMetrics={aiMetrics} />
+        <AIRoutingSection aiMetrics={aiMetrics} groqConfigured={groqConfigured ?? null} />
         <SafetyBoundary />
         <p className="text-[10px] leading-relaxed text-slate-400">Ollama provides local/offline LLM reasoning during development. The AI Judge is isolated behind the AI layer, allowing the underlying model/provider to be replaced for production deployment.</p>
       </div>
@@ -108,6 +122,7 @@ function RiskSection({ open, onToggle }: { open: boolean; onToggle: (v: boolean)
             </li>
           ))}
         </ul>
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-400">These are explainable heuristic weights, not ML-trained coefficients. They are reasoned starting weights and should be calibrated against historical labeled cases before production deployment.</p>
       </div>
     </details>
   );
@@ -137,24 +152,80 @@ function AnomalySection({ open, onToggle }: { open: boolean; onToggle: (v: boole
   );
 }
 
-function AIRoutingSection({ aiMetrics }: { aiMetrics: AiMetrics }) {
-  const items = [
-    { label: "Escalated", value: aiMetrics.aiEscalatedCount, color: "text-indigo-700" },
-    { label: "Success", value: aiMetrics.aiSuccessCount, color: "text-emerald-700" },
-    { label: "Fallback", value: aiMetrics.aiFallbackCount, color: "text-amber-700" },
-    { label: "Skipped", value: aiMetrics.aiSkippedCount, color: "text-slate-600" },
-  ];
+function AIRoutingSection({ aiMetrics, groqConfigured }: { aiMetrics: AiMetrics; groqConfigured: boolean | null }) {
+  const fmt = (v: number | null) => v === null ? "Not measured" : String(v);
+  const fmtMs = (v: number | null) => v === null ? "Not measured" : `${v} ms`;
+  const isDualAgent = aiMetrics.dualAgentEnabled && aiMetrics.grokProvider !== null;
   return (
     <div className="rounded-md border border-slate-100 px-3 py-2.5">
-      <p className="text-[11px] font-semibold text-slate-600">AI routing</p>
-      <p className="mt-0.5 text-[11px] text-slate-500">The AI is selectively used for ambiguous cases rather than replacing deterministic reconciliation.</p>
-      <div className="mt-2 grid grid-cols-4 gap-2">
-        {items.map((m) => (
-          <div key={m.label} className="rounded bg-slate-50 px-2 py-1.5 text-center">
-            <p className={`text-sm font-bold tabular-nums ${m.color}`}>{m.value}</p>
-            <p className="text-[9px] font-medium text-slate-500">{m.label}</p>
-          </div>
-        ))}
+      <p className="text-[11px] font-semibold text-slate-600">AI Verification</p>
+      <p className="mt-0.5 text-[11px] text-slate-500">
+        {isDualAgent
+          ? "Two independent AI analysts review only ambiguous cases. A deterministic validator checks their claims against source records. Disagreements remain with a human reviewer."
+          : "AI investigates only ambiguous cases. It provides recommendations; it does not change financial records."}
+      </p>
+
+      {/* Resolution Analyst */}
+      <div className="mt-3 rounded bg-slate-50 px-2.5 py-2">
+        <p className="text-[10px] font-semibold text-slate-700">Resolution Analyst</p>
+        <p className="text-[9px] text-slate-500">{aiMetrics.aiProvider ?? "Ollama"} · Produces an initial evidence-based recommendation.</p>
+        <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
+          <div><p className="text-xs font-bold tabular-nums text-indigo-700">{fmt(aiMetrics.ollamaInvocations ?? aiMetrics.aiEscalatedCount)}</p><p className="text-[8px] text-slate-500">Investigations</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.ollamaSuccesses ?? aiMetrics.aiSuccessCount)}</p><p className="text-[8px] text-slate-500">Successful</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmtMs(aiMetrics.avgOllamaLatencyMs)}</p><p className="text-[8px] text-slate-500">Avg latency</p></div>
+        </div>
+      </div>
+
+      {/* Challenge Analyst */}
+      <div className="mt-2 rounded bg-slate-50 px-2.5 py-2">
+        <p className="text-[10px] font-semibold text-slate-700">Challenge Analyst</p>
+        {isDualAgent ? (
+          <>
+            <p className="text-[9px] text-slate-500">{aiMetrics.grokProvider} · Independently reviews the same evidence and challenges the first perspective.</p>
+            <div className="mt-1.5 grid grid-cols-4 gap-2 text-center">
+              <div><p className="text-xs font-bold tabular-nums text-indigo-700">{fmt(aiMetrics.grokInvocations)}</p><p className="text-[8px] text-slate-500">Investigations</p></div>
+              <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.grokSuccesses)}</p><p className="text-[8px] text-slate-500">Successful</p></div>
+              <div><p className="text-xs font-bold tabular-nums text-rose-700">{fmt(aiMetrics.grokFailures)}</p><p className="text-[8px] text-slate-500">Failures</p></div>
+              <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmtMs(aiMetrics.avgGrokLatencyMs)}</p><p className="text-[8px] text-slate-500">Avg latency</p></div>
+            </div>
+          </>
+        ) : (
+          <p className="mt-1 text-[10px] font-medium text-amber-700">
+            {groqConfigured === null
+              ? "Configuration status unavailable."
+              : groqConfigured
+                ? "Groq challenge analyst is configured. This run used single-agent mode."
+                : "Not configured — GROQ_API_KEY not set. Single-agent mode active."}
+          </p>
+        )}
+      </div>
+
+      {/* Evidence Validator */}
+      <div className="mt-2 rounded bg-slate-50 px-2.5 py-2">
+        <p className="text-[10px] font-semibold text-slate-700">Evidence Validator</p>
+        <p className="text-[9px] text-slate-500">Checks AI claims against the actual transaction and settlement records.</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 text-center">
+          <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.evidenceValidationPassed)}</p><p className="text-[8px] text-slate-500">Validated</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-rose-700">{fmt(aiMetrics.evidenceValidationFailed)}</p><p className="text-[8px] text-slate-500">Rejected</p></div>
+        </div>
+      </div>
+
+      {/* Adjudication */}
+      <div className="mt-2 rounded bg-slate-50 px-2.5 py-2">
+        <p className="text-[10px] font-semibold text-slate-700">Adjudication</p>
+        <p className="text-[9px] text-slate-500">Accepts an AI recommendation only when validation and agreement conditions are satisfied.</p>
+        <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
+          <div><p className="text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.dualAgentAgreements)}</p><p className="text-[8px] text-slate-500">Agreements</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-amber-700">{fmt(aiMetrics.dualAgentDisagreements)}</p><p className="text-[8px] text-slate-500">Disagreements</p></div>
+          <div><p className="text-xs font-bold tabular-nums text-slate-600">{fmt(aiMetrics.aiFallbackCount)}</p><p className="text-[8px] text-slate-500">Fallbacks</p></div>
+        </div>
+      </div>
+
+      {/* Human Decision */}
+      <div className="mt-2 rounded bg-emerald-50 px-2.5 py-2">
+        <p className="text-[10px] font-semibold text-emerald-800">Human Decision</p>
+        <p className="text-[9px] text-emerald-700">AI cannot finalize financial actions. A human reviewer remains responsible for unresolved cases.</p>
+        <p className="mt-1 text-xs font-bold tabular-nums text-emerald-700">{fmt(aiMetrics.aiSkippedCount)} cases retained for human review</p>
       </div>
     </div>
   );

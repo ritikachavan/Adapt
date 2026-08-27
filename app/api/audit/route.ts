@@ -110,7 +110,7 @@ export async function GET(request: Request): Promise<Response> {
       orderBy: { createdAt: "desc" },
     });
     const aiRow =
-      storedDecisions.find((r) => r.source === "OLLAMA") ?? null;
+      storedDecisions.find((r) => r.source === "OLLAMA" || r.source === "GROQ" || r.source === "FALLBACK") ?? null;
 
     let ai: AiStage;
     if (!aiRow) {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ADAPT — Explainable Risk Scoring for Reconciliation Exceptions.
  *
  * This module implements a lightweight, deterministic, feature-based risk model.
@@ -122,7 +122,7 @@ function extractFeatures(decision: DecisionResult): RiskFeatures {
   const decisionSeverity = severityMap[decision.decision] ?? 0.5;
 
   // 7. AI fallback
-  const aiFallback = decision.source === "OLLAMA" && decision.reason.includes("unavailable or invalid") ? 1 : 0;
+  const aiFallback = (decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") && decision.reason.includes("unavailable or invalid") ? 1 : 0;
 
   return {
     amountDiscrepancy,

@@ -113,7 +113,7 @@ describe("ollama AI judge", () => {
       async () => modelSays("{ decision: MATCHED,, nope")
     );
     const result = await provider.judge(CONTEXT);
-    expect(result).toEqual(createSafeFallback("pay_42"));
+    expect(result).toEqual(createSafeFallback("pay_42", "OLLAMA"));
     expect(result.decision).toBe("REVIEW");
     expect(result.confidence).toBe(0);
   });
@@ -199,7 +199,7 @@ describe("ollama AI judge", () => {
       throw new Error("ECONNREFUSED 127.0.0.1:11434");
     });
     const result = await provider.judge(CONTEXT);
-    expect(result).toEqual(createSafeFallback("pay_42"));
+    expect(result).toEqual(createSafeFallback("pay_42", "OLLAMA"));
   });
 
   it("falls back safely when the request times out", async () => {
@@ -242,9 +242,8 @@ describe("ollama AI judge", () => {
     });
     await provider.judge(CONTEXT);
     for (const phrase of [
-      "not authorized to invent records",
-      "Similarity alone is insufficient for approval.",
-      "Prefer REVIEW over an unsupported MATCHED decision.",
+      "Never invent IDs or amounts",
+      "do NOT default to REVIEW",
       "candidateRecordIds",
     ]) {
       expect(promptBody).toContain(phrase);

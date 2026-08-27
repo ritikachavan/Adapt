@@ -119,4 +119,78 @@ describe("Investigation Agent", () => {
     expect(r.settlementCandidates).toBeDefined();
     expect(r.steps[1].label).toContain("Settlement candidates");
   });
+
+  it("investigation of one transaction never leaks another transaction's data", () => {
+    // Bundle with two clearly distinct payments, each with its own settlement.
+    const b: FinancialDataBundle = mkBundle({
+      payments: [
+        { id: "pay_001", orderId: "ord_001", amount: 5000, status: "SETTLED", timestamp: "2024-01-15" },
+        { id: "pay_010", orderId: "ord_010", amount: 9999, status: "SETTLED", timestamp: "2024-02-10" },
+      ],
+      settlements: [
+        { id: "stl_001", paymentId: "pay_001", amount: 5000, fee: 50, settlementDate: "2024-01-16" },
+        { id: "stl_010", paymentId: "pay_010", amount: 9999, fee: 30, settlementDate: "2024-02-11" },
+      ],
+    });
+
+    const r1 = investigate("pay_001", b, mkDecision({ transactionId: "pay_001" }));
+    const r10 = investigate("pay_010", b, mkDecision({ transactionId: "pay_010" }));
+
+    // Each result is explicitly associated with the transaction that requested it.
+    expect(r1.transactionId).toBe("pay_001");
+    expect(r10.transactionId).toBe("pay_010");
+
+    // Candidate settlement IDs belong to the requested transaction only.
+    expect(r1.settlementCandidates.map((c) => c.id)).toEqual(["stl_001"]);
+    expect(r10.settlementCandidates.map((c) => c.id)).toEqual(["stl_010"]);
+    expect(r1.settlementCandidates.some((c) => c.id.includes("010"))).toBe(false);
+    expect(r10.settlementCandidates.some((c) => c.id.includes("001"))).toBe(false);
+
+    // Amounts correspond to the requested transaction's own records.
+    expect(r1.evidence.expectedAmount).toBe(5000);
+    expect(r10.evidence.expectedAmount).toBe(9999);
+    expect(r1.evidence.candidateAmounts).toEqual([5000]);
+    expect(r10.evidence.candidateAmounts).toEqual([9999]);
+
+    // Investigation progress identifies the requested transaction.
+    expect(r1.steps[0].detail).toContain("pay_001");
+    expect(r10.steps[0].detail).toContain("pay_010");
+    expect(r1.steps[0].detail).not.toContain("pay_010");
+    expect(r10.steps[0].detail).not.toContain("pay_001");
+  });
+
+  it("cross-transaction contamination regression test for pay_0006 and pay_0010", () => {
+    // This test specifically validates the bug where pay_0010 data appeared when viewing pay_0006
+    const b: FinancialDataBundle = mkBundle({
+      payments: [
+        { id: "pay_0006", orderId: "ord_0006", amount: 5000, status: "SETTLED", timestamp: "2024-01-15" },
+        { id: "pay_0010", orderId: "ord_0010", amount: 249, status: "SETTLED", timestamp: "2024-02-10" },
+      ],
+      settlements: [
+        { id: "stl_0006", paymentId: "pay_0006", amount: 5000, fee: 50, settlementDate: "2024-01-16" },
+        { id: "stl_0010", paymentId: "pay_0010", amount: 249, fee: 30, settlementDate: "2024-02-11" },
+      ],
+    });
+
+    const r6 = investigate("pay_0006", b, mkDecision({ transactionId: "pay_0006" }));
+    const r10 = investigate("pay_0010", b, mkDecision({ transactionId: "pay_0010" }));
+
+    // Validate pay_0006 investigation does NOT contain pay_0010 data
+    expect(r6.transactionId).toBe("pay_0006");
+    expect(r6.evidence.expectedAmount).toBe(5000);
+    expect(r6.evidence.paymentReference).toBe("ord_0006");
+    expect(r6.settlementCandidates.map((c) => c.id)).toEqual(["stl_0006"]);
+    expect(r6.settlementCandidates.some((c) => c.id === "stl_0010")).toBe(false);
+    expect(r6.settlementCandidates.some((c) => c.amount === 249)).toBe(false);
+    expect(r6.evidence.candidateAmounts).not.toContain(249);
+
+    // Validate pay_0010 investigation contains only pay_0010 data
+    expect(r10.transactionId).toBe("pay_0010");
+    expect(r10.evidence.expectedAmount).toBe(249);
+    expect(r10.evidence.paymentReference).toBe("ord_0010");
+    expect(r10.settlementCandidates.map((c) => c.id)).toEqual(["stl_0010"]);
+    expect(r10.settlementCandidates.some((c) => c.id === "stl_0006")).toBe(false);
+    expect(r10.settlementCandidates.some((c) => c.amount === 5000)).toBe(false);
+    expect(r10.evidence.candidateAmounts).not.toContain(5000);
+  });
 });

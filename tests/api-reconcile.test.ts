@@ -311,9 +311,7 @@ describe("POST /api/reconcile", () => {
     expect(judge).toHaveBeenCalledTimes(2);
     expect(response.aiMetrics?.aiFallbackCount).toBe(2);
     expect(response.aiMetrics?.aiSuccessCount).toBe(0);
-    const escalated = response.decisions.filter(
-      (d) => d.source === "OLLAMA"
-    );
+    const escalated = response.decisions.filter((d) => d.source === "FALLBACK");
     expect(escalated).toHaveLength(2);
     for (const d of escalated) {
       expect(d.decision).toBe("REVIEW");

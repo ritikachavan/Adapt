@@ -6,8 +6,8 @@ export interface LearningCorrection {
 }
 
 /**
- * Learning progress from correction memory: how many human corrections have
- * been learned and which categories they fall into. No fabricated trends —
+ * Resolution Memory progress: how many human-confirmed corrections have
+ * been recorded and which categories they fall into. No fabricated trends —
  * only counts that the API actually returned.
  */
 export default function LearningProgress({
@@ -27,7 +27,7 @@ export default function LearningProgress({
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Learning progress
+        Resolution Memory
       </h2>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -68,7 +68,7 @@ export default function LearningProgress({
       {!loading && types.length === 0 && (
         <p className="mt-3 text-sm text-slate-500">
           No corrections recorded yet. Approvals made through the review screen
-          will appear here as learned patterns.
+          will appear here as correction memory.
         </p>
       )}
     </section>

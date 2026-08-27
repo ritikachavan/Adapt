@@ -15,7 +15,7 @@ const SEGMENTS: Array<{
   bar: string;
 }> = [
   { key: "matched", label: "Matched", bar: "bg-emerald-500" },
-  { key: "reviewed", label: "Reviewed", bar: "bg-amber-500" },
+  { key: "reviewed", label: "Review Required", bar: "bg-amber-500" },
   { key: "mismatched", label: "Mismatched", bar: "bg-rose-500" },
   { key: "missing", label: "Missing", bar: "bg-orange-400" },
   { key: "refunded", label: "Refunded", bar: "bg-sky-500" },

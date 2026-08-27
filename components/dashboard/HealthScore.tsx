@@ -27,7 +27,7 @@ export default function HealthScore({ summary }: HealthScoreProps) {
 
   const segments = [
     { label: "Matched", pct: matched, color: "bg-emerald-500" },
-    { label: "Review", pct: review, color: "bg-amber-500" },
+    { label: "Review Required", pct: review, color: "bg-amber-500" },
     { label: "Mismatch", pct: mismatch, color: "bg-rose-500" },
     { label: "Missing", pct: missing, color: "bg-orange-400" },
     { label: "Refunded", pct: refunded, color: "bg-sky-500" },

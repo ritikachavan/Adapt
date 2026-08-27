@@ -223,7 +223,7 @@ function detectDecisionAnomalies(decision: DecisionResult): AnomalySignal[] {
     }
   }
 
-  if (decision.source === "OLLAMA" && decision.decision === "REVIEW" && decision.reason.includes("unavailable or invalid")) {
+  if ((decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") && decision.decision === "REVIEW" && decision.reason.includes("unavailable or invalid")) {
     signals.push({
       type: "AI_FALLBACK",
       severity: "MEDIUM",

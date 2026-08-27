@@ -6,6 +6,13 @@ interface AIPanelProps {
   aiSuccessCount: number;
   aiFallbackCount: number;
   aiSkippedCount: number;
+  dualAgentEnabled?: boolean;
+  grokProvider?: string | null;
+  ollamaSuccesses?: number | null;
+  grokSuccesses?: number | null;
+  grokFailures?: number | null;
+  dualAgentAgreements?: number | null;
+  dualAgentDisagreements?: number | null;
 }
 
 export default function AIPanel({
@@ -16,21 +23,23 @@ export default function AIPanel({
   aiSuccessCount,
   aiFallbackCount,
   aiSkippedCount,
+  dualAgentEnabled,
+  grokProvider,
+  ollamaSuccesses,
+  grokSuccesses,
+  grokFailures,
+  dualAgentAgreements,
+  dualAgentDisagreements,
 }: AIPanelProps) {
-  const metrics = [
-    { label: "Deterministic Reviews", value: deterministicReviewCount, color: "text-slate-800" },
-    { label: "AI Escalated", value: aiEscalatedCount, color: "text-indigo-700" },
-    { label: "AI Success", value: aiSuccessCount, color: "text-emerald-700" },
-    { label: "AI Fallback", value: aiFallbackCount, color: "text-amber-700" },
-    { label: "AI Skipped", value: aiSkippedCount, color: "text-slate-600" },
-  ];
+  const isDual = dualAgentEnabled && grokProvider !== null;
+  const fmt = (v: number | null | undefined) => v ?? 0;
 
   return (
     <section className={`rounded-xl border shadow-sm ${aiEnabled ? "border-violet-200 bg-violet-50/30" : "border-slate-200 bg-white"}`}>
       <div className="p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            AI Judge
+            AI Verification
           </h2>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
@@ -48,26 +57,62 @@ export default function AIPanel({
           </span>
         </div>
 
-        {aiProvider && (
+        {/* Provider display */}
+        {isDual ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Resolution Analyst</p>
+              <p className="mt-0.5 font-mono text-xs font-bold text-indigo-700">{aiProvider ?? "Ollama"}</p>
+              <p className="mt-0.5 text-[10px] text-slate-500">{fmt(ollamaSuccesses)}/{aiEscalatedCount} valid responses</p>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Challenge Analyst</p>
+              <p className="mt-0.5 font-mono text-xs font-bold text-violet-700">{grokProvider}</p>
+              <p className="mt-0.5 text-[10px] text-slate-500">{fmt(grokSuccesses)}/{aiEscalatedCount} valid{fmt(grokFailures) > 0 ? `, ${fmt(grokFailures)} failure${fmt(grokFailures) > 1 ? "s" : ""}` : ""}</p>
+            </div>
+          </div>
+        ) : aiProvider ? (
           <div className="mt-3 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Provider</p>
-            <p className="mt-0.5 font-mono text-sm font-bold text-violet-700">
-              {aiProvider}
-            </p>
+            <p className="mt-0.5 font-mono text-sm font-bold text-violet-700">{aiProvider}</p>
           </div>
-        )}
+        ) : null}
 
+        {/* Status message */}
         {aiEnabled && aiEscalatedCount > 0 && (
           <p className="mt-3 text-xs text-slate-600">
-            {aiSuccessCount > 0
-              ? `${aiSuccessCount} case${aiSuccessCount > 1 ? "s" : ""} evaluated by AI.`
-              : "AI was invoked but no successful verdicts."}
-            {" "}Human review remains required.
+            {isDual ? (
+              <>
+                {(dualAgentAgreements ?? 0) > 0
+                  ? `Dual-agent agreement reached on ${dualAgentAgreements} case(s). Evidence validated. Recommendation available for human review.`
+                  : (dualAgentDisagreements ?? 0) > 0
+                    ? `AI produced valid analyses, but no recommendation satisfied the dual-agent agreement policy. Human review remains required.`
+                    : `AI produced valid analyses. Cases remain with human review.`}
+              </>
+            ) : (
+              <>
+                {aiSuccessCount > 0
+                  ? `${aiSuccessCount} case${aiSuccessCount > 1 ? "s" : ""} evaluated by AI.`
+                  : "AI was invoked but no valid verdicts were produced."}
+                {" "}Human review remains required.
+              </>
+            )}
           </p>
         )}
 
+        {/* Metrics */}
         <div className="mt-4 space-y-2.5">
-          {metrics.map((m) => (
+          {[
+            { label: "AI Investigations", value: aiEscalatedCount, color: "text-indigo-700" },
+            ...(isDual ? [
+              { label: "Agreements", value: fmt(dualAgentAgreements), color: "text-emerald-700" },
+              { label: "Disagreements", value: fmt(dualAgentDisagreements), color: "text-amber-700" },
+            ] : [
+                            { label: "Valid Responses", value: ollamaSuccesses ?? aiSuccessCount, color: "text-emerald-700" },
+            ]),
+            { label: "Fallbacks", value: aiFallbackCount, color: "text-amber-700" },
+            { label: "Not Invoked", value: aiSkippedCount, color: "text-slate-600" },
+          ].map((m) => (
             <div
               key={m.label}
               className="flex items-center justify-between rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100"

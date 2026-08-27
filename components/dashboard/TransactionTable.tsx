@@ -91,7 +91,7 @@ export default function TransactionTable({ decisions, onRowClick, activeFilter, 
           <thead><tr className="border-b border-slate-100 bg-slate-50/50">
             <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Transaction</th>
             <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Status</th>
-            <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">Confidence</th>
+            <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500" title="Internal evidence-based routing score">Decision Confidence</th>
             <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Matched Record</th>
             <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Source</th>
             <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">Reason</th>

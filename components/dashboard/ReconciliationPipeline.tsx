@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export type PipelineStatus = "IDLE" | "PROCESSING" | "AI_PROCESSING" | "COMPLETE";
+export type PipelineStatus = "IDLE" | "PROCESSING" | "COMPLETE";
 
 export interface PipelineData {
   total: number;
@@ -25,19 +25,22 @@ interface Props {
   onStageClick?: (filter: string) => void;
 }
 
-const STAGE_DURATION = 600;
-
 export default function ReconciliationPipeline({ status, data, aiMode, onStageClick }: Props) {
-  const [activeStage, setActiveStage] = useState(0);
+  // Truthful rendering rule: the reconciliation API is request/response only,
+  // so intermediate stage progression CANNOT be observed by the client.
+  // While the request is in flight only the deterministic stage is shown as
+  // active; no later stage is ever marked active/completed before the real
+  // response arrives.
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
-    if (status === "IDLE" || status === "COMPLETE") { setActiveStage(0); return; }
-    setActiveStage(1);
-    const stages = aiMode ? 6 : 5;
-    const timers: NodeJS.Timeout[] = [];
-    for (let i = 2; i <= stages; i++) timers.push(setTimeout(() => setActiveStage(i), STAGE_DURATION * (i - 1)));
-    return () => timers.forEach(clearTimeout);
-  }, [status, aiMode]);
+    if (status !== "PROCESSING") { setElapsedSeconds(0); return; }
+    const startedAt = Date.now();
+    const tick = setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(tick);
+  }, [status]);
+
+  const activeStage = status === "COMPLETE" ? 99 : status === "PROCESSING" ? 1 : 0;
 
   const exceptions = data ? data.reviewed + data.mismatched + data.missing + data.refunded : 0;
   const humanReview = data ? data.reviewed - data.aiSuccessCount : 0;
@@ -55,12 +58,32 @@ export default function ReconciliationPipeline({ status, data, aiMode, onStageCl
   const isStageActive = (i: number) => status !== "COMPLETE" && status !== "IDLE" && i === activeStage;
   const isStageCompleted = (i: number) => status === "COMPLETE" ? true : status === "IDLE" ? false : i < activeStage;
 
+  const progressNote = status === "PROCESSING"
+    ? aiMode
+      ? "One request in flight — deterministic matching completes first, then AI verification runs for escalated cases. Waiting for local model inference…"
+      : "One request in flight — deterministic matching, anomaly intelligence and exposure analysis."
+    : null;
+
   return (
     <section className="rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Reconciliation pipeline">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Live Pipeline</h2>
         <StatusBadge status={status} aiMode={aiMode} aiFallbackCount={data?.aiFallbackCount ?? 0} />
       </div>
+      {progressNote !== null || status === "IDLE" ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-5 py-2.5 text-xs">
+          {progressNote !== null ? (
+            <>
+              <span className="text-slate-600">{progressNote}</span>
+              <span className="ml-auto inline-flex items-center gap-1 font-semibold tabular-nums text-slate-700">
+                Elapsed {elapsedSeconds}s
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400">Awaiting the first reconciliation run.</span>
+          )}
+        </div>
+      ) : null}
       <div className="p-5">
         <div className="hidden md:flex md:items-start md:gap-0">
           {stages.map((stage, i) => (
@@ -151,7 +174,6 @@ function StatusBadge({ status, aiMode, aiFallbackCount }: { status: PipelineStat
   const configs = {
     IDLE: { label: "Ready", bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400" },
     PROCESSING: { label: "Processing", bg: "bg-indigo-100", text: "text-indigo-700", dot: "bg-indigo-500 animate-pulse" },
-    AI_PROCESSING: { label: "AI Judge Active", bg: "bg-violet-100", text: "text-violet-700", dot: "bg-violet-500 animate-pulse" },
     COMPLETE: { label: "Complete", bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-emerald-500" },
   };
   const c = configs[status];

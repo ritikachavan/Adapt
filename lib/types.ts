@@ -67,7 +67,7 @@ export type ReconciliationDecision =
   | "REFUNDED";
 
 /** Where a decision came from. The deterministic engine only emits DETERMINISTIC. */
-export type DecisionSource = "DETERMINISTIC" | "OLLAMA" | "HUMAN_REVIEW";
+export type DecisionSource = "DETERMINISTIC" | "OLLAMA" | "GROQ" | "FALLBACK" | "HUMAN_REVIEW";
 
 /** One machine-checkable fact supporting a decision. */
 export interface EvidenceItem {
@@ -128,6 +128,17 @@ export interface DecisionResult {
     rationale: string;
     steps: Array<{ order: number; action: string }>;
     supportingSignals: string[];
+  };
+  /** Dual-agent verification metadata. Only present when dual-agent mode was active. */
+  dualAgent?: {
+    mode: "SINGLE_AGENT" | "DUAL_AGENT";
+    ollamaDecision: string | null;
+    ollamaConfidence: number | null;
+    groqDecision: string | null;
+    groqConfidence: number | null;
+    evidenceValidationPassed: boolean | null;
+    evidenceValidationErrors: string[];
+    adjudication: "AGREED" | "DISAGREED" | "EVIDENCE_FAILED" | "PROVIDER_UNAVAILABLE" | "FALLBACK" | null;
   };
 }
 

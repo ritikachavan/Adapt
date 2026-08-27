@@ -131,7 +131,7 @@ describe("human review + correction memory", () => {
     expect(rows).toHaveLength(1);
     // The stored row reflects the AI-escalation stage's verdict for this
     // transaction (safe fallback when Ollama is absent), hence source OLLAMA.
-    expect(rows[0].source).toBe("OLLAMA");
+    expect(rows[0].source).toBe("FALLBACK");
     expect(saved.decisionId).toBe(rows[0].id);
 
     // Correcting the same transaction again reuses the same decision row.

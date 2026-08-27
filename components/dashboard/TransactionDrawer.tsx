@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import DecisionBadge from "../ui/DecisionBadge";
+import DecisionPassport from "./DecisionPassport";
 
 interface InvestigationStep {
   label: string;
@@ -69,6 +70,16 @@ export interface DrawerDecision {
   risk?: { score: number; level: string; signals: string[] };
   anomaly?: { isAnomalous: boolean; anomalyScore: number; severity: string | null; signals: Array<{ type: string; severity: string; title: string; explanation: string; evidence: string[] }> };
   resolution?: { priority: string; action: string; title: string; rationale: string; steps: Array<{ order: number; action: string }>; supportingSignals: string[] };
+  dualAgent?: {
+    mode: "SINGLE_AGENT" | "DUAL_AGENT";
+    ollamaDecision: string | null;
+    ollamaConfidence: number | null;
+    groqDecision: string | null;
+    groqConfidence: number | null;
+    evidenceValidationPassed: boolean | null;
+    evidenceValidationErrors: string[];
+    adjudication: "AGREED" | "DISAGREED" | "EVIDENCE_FAILED" | "PROVIDER_UNAVAILABLE" | "FALLBACK" | null;
+  };
 }
 
 interface Props {
@@ -79,6 +90,8 @@ interface Props {
 const SRC: Record<string, string> = {
   DETERMINISTIC: "Deterministic Engine",
   OLLAMA: "AI Judge (Ollama)",
+  GROQ: "AI Judge (Groq)",
+  FALLBACK: "AI Fallback",
   HUMAN_REVIEW: "Human Review",
 };
 
@@ -96,29 +109,72 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
   const [investigating, setInvestigating] = useState(false);
   const [investigateError, setInvestigateError] = useState<string | null>(null);
 
+  // ID of the transaction the most recent investigation request was issued for.
+  const pendingTransactionRef = useRef<string | null>(null);
+
+  const selectedTransactionId = decision?.transactionId ?? null;
+
+  // Reset per-transaction investigation state whenever the drawer targets a new
+  // transaction, so a previously investigated record's data never leaks into the
+  // currently selected record's view.
+  useEffect(() => {
+    setInvestigation(null);
+    setInvestigating(false);
+    setInvestigateError(null);
+    pendingTransactionRef.current = null;
+  }, [selectedTransactionId]);
+
   const runInvestigation = useCallback(async () => {
     if (!decision) return;
+    const tid = decision.transactionId;
+    pendingTransactionRef.current = tid;
     setInvestigating(true);
     setInvestigateError(null);
     setInvestigation(null);
+    // commit(fn) only applies the update if this request's transaction is still
+    // the currently selected one. This prevents a slow investigation response
+    // for transaction A from overwriting the view when the user has switched to
+    // transaction B (or closed the drawer) while the request was in flight.
+    const commit = (fn: () => void) => {
+      if (pendingTransactionRef.current === tid) fn();
+    };
     try {
       const res = await fetch("/api/investigate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionId: decision.transactionId }),
+        body: JSON.stringify({ transactionId: tid }),
       });
       if (!res.ok) {
         const err = (await res.json()) as { error?: string };
-        setInvestigateError(err.error || "Investigation failed");
+        commit(() => { setInvestigateError(err.error || "Investigation failed"); setInvestigating(false); });
         return;
       }
-      setInvestigation((await res.json()) as InvestigationResult);
+      const result = (await res.json()) as InvestigationResult;
+      // Defensive: only commit a result whose transaction ID matches the one we
+      // requested. The server returns the transaction it actually investigated;
+      // if it does not match, ignore it rather than rendering foreign data.
+      commit(() => {
+        if (result && result.transactionId === tid) {
+          setInvestigation(result);
+        } else {
+          setInvestigateError("Investigation returned data for a different transaction.");
+        }
+        setInvestigating(false);
+      });
     } catch {
-      setInvestigateError("Could not reach the investigation API.");
-    } finally {
-      setInvestigating(false);
+      commit(() => { setInvestigateError("Could not reach the investigation API."); setInvestigating(false); });
     }
   }, [decision]);
+
+  // Additional safety: ensure investigation state is always consistent with selected transaction
+  // This acts as a final defense against any edge cases where stale data might persist
+  useEffect(() => {
+    if (investigation && investigation.transactionId !== selectedTransactionId) {
+      setInvestigation(null);
+      setInvestigating(false);
+      setInvestigateError(null);
+    }
+  }, [selectedTransactionId, investigation]);
 
   useEffect(() => {
     if (!decision) return;
@@ -151,24 +207,34 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <DecisionBadge decision={decision.decision} />
-            <span className={`text-sm font-bold tabular-nums ${c.t}`}>{Math.round(decision.confidence * 100)}% confidence</span>
+            <span className={`text-sm font-bold tabular-nums ${c.t}`} title="Internal evidence-based routing score, not a calibrated probability">{Math.round(decision.confidence * 100)}% decision confidence</span>
             <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-semibold ${
               decision.aiStatus === "AI_SUCCESS" ? "bg-violet-100 text-violet-700" :
               decision.aiStatus === "AI_FALLBACK" ? "bg-amber-100 text-amber-700" :
               decision.aiStatus === "AI_SKIPPED" ? "bg-slate-100 text-slate-500" :
               decision.aiStatus === "AI_NOT_REQUESTED" ? "bg-slate-100 text-slate-400" :
-              decision.source === "OLLAMA" ? "bg-violet-100 text-violet-700" :
+              (decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") ? "bg-violet-100 text-violet-700" :
               decision.source === "HUMAN_REVIEW" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
             }`}>{
-              decision.aiStatus === "AI_SUCCESS" ? "AI Judge (Ollama) — Investigated" :
-              decision.aiStatus === "AI_FALLBACK" ? "AI Judge — Fallback (Human Review Required)" :
-              decision.aiStatus === "AI_SKIPPED" ? "AI Judge — Not Escalated" :
-              decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Judge — Not Requested" :
+              decision.aiStatus === "AI_SUCCESS" ? "AI Investigated" :
+              decision.aiStatus === "AI_FALLBACK" ? "AI Fallback — Human Review Required" :              decision.aiStatus === "AI_SKIPPED" ? "AI Not Invoked" :
+              decision.aiStatus === "AI_NOT_REQUESTED" ? "AI Not Requested" :
               SRC[decision.source] ?? decision.source
             }</span>
           </div>
         </div>
         <div className="space-y-6 px-6 py-5">
+          {/* Decision Passport — primary view for AI-investigated cases */}
+          <DecisionPassport
+            transactionId={decision.transactionId}
+            decision={decision.decision}
+            confidence={decision.confidence}
+            reason={decision.reason}
+            evidence={decision.evidence}
+            aiStatus={decision.aiStatus}
+            dualAgent={decision.dualAgent}
+            matchedRecordId={decision.matchedRecordId}
+          />
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Decision Reason</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-800">{decision.reason}</p>
@@ -197,7 +263,7 @@ export default function TransactionDrawer({ decision, onClose }: Props) {
           <ExplainDecision decision={decision} c={c} />
           <InvestigationSection
             decision={decision}
-            investigation={investigation}
+            investigation={investigation && investigation.transactionId === decision.transactionId ? investigation : null}
             investigating={investigating}
             investigateError={investigateError}
             onRun={runInvestigation}
@@ -267,7 +333,7 @@ function ExplainDecision({ decision, c }: { decision: DrawerDecision; c: { b: st
         <p className={c.t}><span className="font-semibold">Confidence:</span> {Math.round(decision.confidence * 100)}%</p>
         <p className={c.t}><span className="font-semibold">Source:</span> {SRC[decision.source] ?? decision.source}</p>
         <p className={c.t}><span className="font-semibold">Evidence items:</span> {decision.evidence.length}</p>
-        {decision.source === "OLLAMA" && decision.decision === "REVIEW" && (
+        {(decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") && decision.decision === "REVIEW" && (
           <p className="mt-2 text-xs text-amber-700">⚠ AI could not reach a confident verdict. This case remains in safe REVIEW for human evaluation.</p>
         )}
       </div>
@@ -407,7 +473,7 @@ function ResolutionIntelligence({ resolution }: { resolution: { priority: string
         </div>
       )}
       <div className="mt-3 rounded-md bg-white/60 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Decision Required</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Review Required</p>
         <p className="mt-0.5 text-[11px] text-slate-600">This recommendation requires human review and approval before any action is taken.</p>
       </div>
     </section>
@@ -486,7 +552,7 @@ function InvestigationResults({ investigation, stepIcon }: { investigation: Inve
         <p className={`mt-1 text-sm font-bold ${investigation.recommendation === "MATCH_CANDIDATE" ? "text-emerald-700" : "text-amber-700"}`}>{investigation.recommendation === "MATCH_CANDIDATE" ? "MATCH CANDIDATE" : "REVIEW"}</p>
         <p className="mt-0.5 text-xs text-slate-600">{Math.round(investigation.confidence * 100)}% confidence</p>
         <p className="mt-1 text-xs text-slate-700">{investigation.reason}</p>
-        {investigation.humanReviewRequired && <div className="mt-2 rounded-md bg-white/60 p-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Decision Required</p></div>}
+        {investigation.humanReviewRequired && <div className="mt-2 rounded-md bg-white/60 p-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Human Review Required</p></div>}
       </div>
 
       {/* Why unresolved? */}

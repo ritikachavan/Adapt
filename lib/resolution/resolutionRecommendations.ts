@@ -114,7 +114,7 @@ function reviewRecommendation(decision: DecisionResult): ResolutionRecommendatio
   if (hasNearDup) rationaleParts.push("a near-duplicate reference was found");
   if (rationaleParts.length === 0) rationaleParts.push("the deterministic engine could not reach a confident verdict");
 
-  const isAiFallback = decision.source === "OLLAMA" && decision.reason.includes("unavailable or invalid");
+  const isAiFallback = (decision.source === "OLLAMA" || decision.source === "GROQ" || decision.source === "FALLBACK") && decision.reason.includes("unavailable or invalid");
 
   const steps: ResolutionStep[] = [
     { order: 1, action: "Review all candidate records" },
