@@ -41,3 +41,9 @@ prisma/dev.db-journal
 .aider*
 
 .kilo/
+# local development artifacts
+*.log
+*.pid
+*.ps1
+*-task.txt
+
