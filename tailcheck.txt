@@ -1,6 +1,0 @@
-﻿
-
-Γùï  (Static)   prerendered as static content
-╞Æ  (Dynamic)  server-rendered on demand
-
-BUILD_EXIT:0
